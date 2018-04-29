@@ -1,0 +1,16 @@
+postgres:
+  host: 127.0.0.1
+  port: 14003
+  sslmode: false
+
+mysql:
+  host: 127.0.0.1
+  port: 14003
+
+migrate:
+  path: ./migrations
+  table_name: app_db_version
+
+seed:
+  path: ./seed
+  table_name: app_seed_version
