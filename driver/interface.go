@@ -11,19 +11,19 @@ type Config struct {
 
 	Dialect          string
 	Dsn              string
-	Path             string
+	Dir              string
 	VersionTableName string
 }
 
 type Interface interface {
 	Create(name, ext string) error
 	Down() error
-	DownTo(version int) error
+	DownTo(version string) error
 	Redo() error
 	Reset() error
 	Status() error
 	Up() error
-	UpTo(version int) error
+	UpTo(version string) error
 	Version() error
 }
 
@@ -34,9 +34,9 @@ func New(cfg *Config) (Interface, error) {
 			cfg.Dialect,
 			cfg.Dsn,
 			cfg.VersionTableName,
-			cfg.Path,
-		), nil
+			cfg.Dir,
+		)
 	default:
+		return nil, errors.New("unsupported driver")
 	}
-	return nil, errors.New("unsupported driver")
 }

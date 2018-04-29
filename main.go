@@ -38,12 +38,6 @@ func main() {
 				Usage:   "Config file name",
 				EnvVars: []string{"MIGA_CONFIG"},
 			},
-			&cli.StringFlag{
-				Name:    "path",
-				Value:   "migrations/",
-				Usage:   "Path to [migrations|seeds] files",
-				EnvVars: []string{"MIGA_PATH"},
-			},
 		},
 		Before: initGlobalsFunc(),
 		Commands: []*cli.Command{

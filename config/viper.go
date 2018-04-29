@@ -21,13 +21,13 @@ func Init(appName, cfg string) error {
 	migrateConfig = &driver.Config{
 		Name:             "goose",
 		VersionTableName: "miga_db_version",
-		Path:             "./migrations",
+		Dir:              "./migrations",
 	}
 
 	seedConfig = &driver.Config{
 		Name:             "goose",
 		VersionTableName: "miga_seed_version",
-		Path:             "./seeds",
+		Dir:              "./seeds",
 	}
 
 	if viper.IsSet("migrate.table_name") {
@@ -38,21 +38,25 @@ func Init(appName, cfg string) error {
 	}
 
 	if viper.IsSet("migrate.path") {
-		migrateConfig.Path = viper.GetString("migrate.path")
+		migrateConfig.Dir = viper.GetString("migrate.path")
 	}
 	if viper.IsSet("seed.table_name") {
-		seedConfig.Path = viper.GetString("seed.path")
+		seedConfig.Dir = viper.GetString("seed.path")
 	}
 
 	if viper.IsSet("postgres") {
 		migrateConfig.Dialect = "postgres"
+		migrateConfig.Dsn = viper.GetString("postgres.dsn")
 		seedConfig.Dialect = "postgres"
+		seedConfig.Dsn = viper.GetString("postgres.dsn")
 		return nil
 	}
 
 	if viper.IsSet("mysql") {
 		migrateConfig.Dialect = "mysql"
+		migrateConfig.Dsn = viper.GetString("mysql.dsn")
 		seedConfig.Dialect = "mysql"
+		seedConfig.Dsn = viper.GetString("mysql.dsn")
 		return nil
 	}
 

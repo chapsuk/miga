@@ -1,37 +1,67 @@
 package goose
 
-import "github.com/chapsuk/miga/logger"
+import (
+	"database/sql"
 
-type Goose struct{}
+	orig "github.com/pressly/goose"
 
-func New(dialect, dsn, tableName, path string) *Goose {
-	return &Goose{}
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+)
+
+type Goose struct {
+	db  *sql.DB
+	dir string
 }
+
+func New(dialect, dsn, tableName, dir string) (*Goose, error) {
+	err := orig.SetDialect(dialect)
+	if err != nil {
+		return nil, err
+	}
+
+	orig.SetDBVersionTableName(tableName)
+
+	db, err := sql.Open(dialect, dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Goose{db: db, dir: dir}, nil
+}
+
 func (g *Goose) Create(name, ext string) error {
-	logger.G().Infof("name: %s ext: %s", name, ext)
-	return nil
+	return orig.Run("create", g.db, g.dir, name, ext)
 }
+
 func (g *Goose) Down() error {
-	return nil
+	return orig.Run("down", g.db, g.dir)
 }
-func (g *Goose) DownTo(version int) error {
-	return nil
+
+func (g *Goose) DownTo(version string) error {
+	return orig.Run("down-to", g.db, g.dir, version)
 }
+
 func (g *Goose) Redo() error {
-	return nil
+	return orig.Run("redo", g.db, g.dir)
 }
+
 func (g *Goose) Reset() error {
-	return nil
+	return orig.Run("reset", g.db, g.dir)
 }
+
 func (g *Goose) Status() error {
-	return nil
+	return orig.Run("status", g.db, g.dir)
 }
+
 func (g *Goose) Up() error {
-	return nil
+	return orig.Run("up", g.db, g.dir)
 }
-func (g *Goose) UpTo(version int) error {
-	return nil
+
+func (g *Goose) UpTo(version string) error {
+	return orig.Run("up-to", g.db, g.dir, version)
 }
+
 func (g *Goose) Version() error {
-	return nil
+	return orig.Run("version", g.db, g.dir)
 }

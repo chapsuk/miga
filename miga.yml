@@ -1,16 +1,13 @@
 postgres:
-  host: 127.0.0.1
-  port: 14003
-  sslmode: false
+  dsn: "host=127.0.0.1 user=postgres password=postgres port=5432 sslmode=disable database=miga"
 
 mysql:
-  host: 127.0.0.1
-  port: 14003
+  dsn: ""
 
 migrate:
   path: ./migrations
   table_name: app_db_version
 
 seed:
-  path: ./seed
+  path: ./seeds
   table_name: app_seed_version
