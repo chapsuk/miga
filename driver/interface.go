@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/chapsuk/miga/driver/goose"
+	"github.com/chapsuk/miga/driver/migrate"
 )
 
 type Config struct {
@@ -31,6 +32,13 @@ func New(cfg *Config) (Interface, error) {
 	switch cfg.Name {
 	case "goose":
 		return goose.New(
+			cfg.Dialect,
+			cfg.Dsn,
+			cfg.VersionTableName,
+			cfg.Dir,
+		)
+	case "migrate":
+		return migrate.New(
 			cfg.Dialect,
 			cfg.Dsn,
 			cfg.VersionTableName,

@@ -18,14 +18,19 @@ func Init(appName, cfg string) error {
 		return err
 	}
 
+	driverName := "goose"
+	if viper.IsSet("driver") {
+		driverName = viper.GetString("driver")
+	}
+
 	migrateConfig = &driver.Config{
-		Name:             "goose",
+		Name:             driverName,
 		VersionTableName: "miga_db_version",
 		Dir:              "./migrations",
 	}
 
 	seedConfig = &driver.Config{
-		Name:             "goose",
+		Name:             driverName,
 		VersionTableName: "miga_seed_version",
 		Dir:              "./seeds",
 	}

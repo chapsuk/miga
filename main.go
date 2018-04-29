@@ -8,6 +8,9 @@ import (
 	"github.com/chapsuk/miga/config"
 	"github.com/chapsuk/miga/logger"
 	"gopkg.in/urfave/cli.v2"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 var (

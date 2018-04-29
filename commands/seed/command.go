@@ -35,10 +35,33 @@ func Command() *cli.Command {
 				},
 			},
 			&cli.Command{
+				Name:      "up-to",
+				ArgsUsage: "VERSION",
+				Usage:     "Goto a specific seed VERSION",
+				Action: func(ctx *cli.Context) error {
+					return commands.UpTo(ctx, seeder)
+				},
+			},
+			&cli.Command{
 				Name:  "down",
 				Usage: "Roll back last seeds",
 				Action: func(ctx *cli.Context) error {
 					return commands.Down(ctx, seeder)
+				},
+			},
+			&cli.Command{
+				Name:      "down-to",
+				ArgsUsage: "VERSION",
+				Usage:     "Roll back to a specific seed VERSION",
+				Action: func(ctx *cli.Context) error {
+					return commands.DownTo(ctx, seeder)
+				},
+			},
+			&cli.Command{
+				Name:  "redo",
+				Usage: "Re-run the latest seed",
+				Action: func(ctx *cli.Context) error {
+					return commands.Redo(ctx, seeder)
 				},
 			},
 			&cli.Command{

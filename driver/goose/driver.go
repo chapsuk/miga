@@ -4,9 +4,6 @@ import (
 	"database/sql"
 
 	orig "github.com/pressly/goose"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
 )
 
 type Goose struct {
