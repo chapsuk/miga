@@ -9,11 +9,12 @@ import (
 
 var seeder driver.Interface
 
+// Command returns seed CLI command
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:    "seed",
 		Aliases: []string{"s"},
-		Usage:   "seed command",
+		Usage:   "Seeding root command, see",
 		Before: func(ctx *cli.Context) (err error) {
 			seeder, err = driver.New(config.SeedDriverConfig())
 			return
@@ -21,8 +22,8 @@ func Command() *cli.Command {
 		Subcommands: []*cli.Command{
 			&cli.Command{
 				Name:      "create",
-				Usage:     "Creates new seed file with next version",
-				ArgsUsage: "NAME [sql|go]",
+				Usage:     "Creates new seed sql file with next version",
+				ArgsUsage: "NAME",
 				Action: func(ctx *cli.Context) error {
 					return commands.Create(ctx, seeder)
 				},

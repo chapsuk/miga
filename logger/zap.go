@@ -38,8 +38,8 @@ func Init(appName, appVersion, level, format string) error {
 	}
 
 	logger = l.Sugar().With(
-		"app", appName,
-		"version", appVersion,
+		"app_name", appName,
+		"app_version", appVersion,
 	)
 
 	return nil

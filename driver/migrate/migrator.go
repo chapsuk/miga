@@ -2,13 +2,15 @@ package migrate
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 
-	"github.com/chapsuk/miga/utils"
-
 	"github.com/chapsuk/miga/logger"
+	"github.com/chapsuk/miga/utils"
 	orig "github.com/mattes/migrate"
+	"github.com/mattes/migrate/database"
+	"github.com/mattes/migrate/database/mysql"
 	"github.com/mattes/migrate/database/postgres"
 
 	_ "github.com/mattes/migrate/source/file"
@@ -26,9 +28,20 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 		return nil, err
 	}
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{
-		MigrationsTable: tableName,
-	})
+	var driver database.Driver
+	switch dialect {
+	case "postgres":
+		driver, err = postgres.WithInstance(db, &postgres.Config{
+			MigrationsTable: tableName,
+		})
+	case "mysql":
+		driver, err = mysql.WithInstance(db, &mysql.Config{
+			MigrationsTable: tableName,
+		})
+	default:
+		return nil, errors.New("Unsupported dialect")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +50,7 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 	if err != nil {
 		return nil, err
 	}
-	m.Log = &migrateLogger{}
+	m.Log = &utils.StdLogger{}
 
 	return &Migrator{
 		backend: m,
@@ -131,14 +144,4 @@ func versionToUint(version string) (uint, error) {
 		return 0, err
 	}
 	return uint(v), nil
-}
-
-type migrateLogger struct{}
-
-func (l *migrateLogger) Printf(format string, v ...interface{}) {
-	logger.G().Infof(format, v...)
-}
-
-func (l *migrateLogger) Verbose() bool {
-	return true
 }

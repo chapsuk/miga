@@ -9,6 +9,7 @@ import (
 
 var migrateConfig, seedConfig *driver.Config
 
+// Init configuration with viper
 func Init(appName, cfg string) error {
 	viper.SetConfigFile(cfg)
 	viper.SetEnvPrefix(appName)

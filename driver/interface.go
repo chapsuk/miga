@@ -45,6 +45,6 @@ func New(cfg *Config) (Interface, error) {
 			cfg.Dir,
 		)
 	default:
-		return nil, errors.New("unsupported driver")
+		return nil, errors.New("unsupported migrations driver")
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
+// Reset rollback all migrations
 func Reset(ctx *cli.Context, d driver.Interface) error {
 	if !ctx.Bool("force") {
 		logger.G().Info("Rollback all migrations! Are you sure? (yes/no):")

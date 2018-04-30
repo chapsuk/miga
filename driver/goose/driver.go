@@ -3,6 +3,7 @@ package goose
 import (
 	"database/sql"
 
+	"github.com/chapsuk/miga/utils"
 	orig "github.com/pressly/goose"
 )
 
@@ -18,6 +19,7 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	}
 
 	orig.SetDBVersionTableName(tableName)
+	orig.SetLogger(&utils.StdLogger{})
 
 	db, err := sql.Open(dialect, dsn)
 	if err != nil {

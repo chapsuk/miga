@@ -56,16 +56,16 @@ func main() {
 
 func initGlobalsFunc() func(*cli.Context) error {
 	return func(ctx *cli.Context) error {
-		err := config.Init(ctx.App.Name, ctx.String("config"))
-		if err != nil {
-			return err
-		}
-
-		return logger.Init(
+		err := logger.Init(
 			ctx.App.Name,
 			ctx.App.Version,
 			ctx.String("log.level"),
 			ctx.String("log.format"),
 		)
+		if err != nil {
+			return err
+		}
+
+		return config.Init(ctx.App.Name, ctx.String("config"))
 	}
 }

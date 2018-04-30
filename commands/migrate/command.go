@@ -9,11 +9,12 @@ import (
 
 var migrator driver.Interface
 
+// Command returns migration CLI command
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:    "migrate",
 		Aliases: []string{"m"},
-		Usage:   "migrate command",
+		Usage:   "Migrations root command",
 		Before: func(ctx *cli.Context) (err error) {
 			migrator, err = driver.New(config.MigrateDriverConfig())
 			return
@@ -21,8 +22,8 @@ func Command() *cli.Command {
 		Subcommands: []*cli.Command{
 			&cli.Command{
 				Name:      "create",
-				Usage:     "Creates new migration file with next version",
-				ArgsUsage: "NAME [sql|go]",
+				Usage:     "Creates new migration sql file",
+				ArgsUsage: "NAME",
 				Action: func(ctx *cli.Context) error {
 					return commands.Create(ctx, migrator)
 				},
