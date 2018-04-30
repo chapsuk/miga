@@ -3,9 +3,9 @@ package migrate
 import (
 	"database/sql"
 	"fmt"
-	"os"
 	"strconv"
-	"time"
+
+	"github.com/chapsuk/miga/utils"
 
 	"github.com/chapsuk/miga/logger"
 	orig "github.com/mattes/migrate"
@@ -47,16 +47,7 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 }
 
 func (m *Migrator) Create(name, ext string) error {
-	timestamp := time.Now().Unix()
-	base := fmt.Sprintf("%v/%v_%v.", m.dir, timestamp, name)
-	os.MkdirAll(m.dir, os.ModePerm)
-
-	err := createFile(base + "up." + ext)
-	if err != nil {
-		return err
-	}
-
-	return createFile(base + "down." + ext)
+	return utils.CreateMigrationsFiles(m.dir, name, ext)
 }
 
 func (m *Migrator) Down() error {
@@ -140,15 +131,6 @@ func versionToUint(version string) (uint, error) {
 		return 0, err
 	}
 	return uint(v), nil
-}
-
-func createFile(fname string) error {
-	_, err := os.Create(fname)
-	if err != nil {
-		return err
-	}
-	logger.G().Infof("Create migrations file: %s", fname)
-	return nil
 }
 
 type migrateLogger struct{}
