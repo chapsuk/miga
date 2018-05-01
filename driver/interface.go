@@ -33,6 +33,7 @@ type Config struct {
 
 type Interface interface {
 	Create(name, ext string) error
+	Close() error
 	Down() error
 	DownTo(version string) error
 	Redo() error

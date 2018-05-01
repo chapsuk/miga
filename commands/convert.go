@@ -3,8 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
 
+	"github.com/chapsuk/miga/converter"
 	"github.com/chapsuk/miga/driver"
 	"gopkg.in/urfave/cli.v2"
 )
@@ -33,17 +33,5 @@ func Convert(ctx *cli.Context, cfg *driver.Config) error {
 		return fmt.Errorf("unsupported TO_FORMAT: %s", from)
 	}
 
-	_, err := os.Stat(dest)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-
-		err = os.Mkdir(dest, os.ModeDir)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return converter.Convert(from, to, cfg.Dir, dest)
 }

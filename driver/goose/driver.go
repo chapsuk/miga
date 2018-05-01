@@ -29,38 +29,42 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	return &Goose{db: db, dir: dir}, nil
 }
 
-func (g *Goose) Create(name, ext string) error {
+func (g Goose) Close() error {
+	return g.db.Close()
+}
+
+func (g Goose) Create(name, ext string) error {
 	return orig.Run("create", g.db, g.dir, name, ext)
 }
 
-func (g *Goose) Down() error {
+func (g Goose) Down() error {
 	return orig.Run("down", g.db, g.dir)
 }
 
-func (g *Goose) DownTo(version string) error {
+func (g Goose) DownTo(version string) error {
 	return orig.Run("down-to", g.db, g.dir, version)
 }
 
-func (g *Goose) Redo() error {
+func (g Goose) Redo() error {
 	return orig.Run("redo", g.db, g.dir)
 }
 
-func (g *Goose) Reset() error {
+func (g Goose) Reset() error {
 	return orig.Run("reset", g.db, g.dir)
 }
 
-func (g *Goose) Status() error {
+func (g Goose) Status() error {
 	return orig.Run("status", g.db, g.dir)
 }
 
-func (g *Goose) Up() error {
+func (g Goose) Up() error {
 	return orig.Run("up", g.db, g.dir)
 }
 
-func (g *Goose) UpTo(version string) error {
+func (g Goose) UpTo(version string) error {
 	return orig.Run("up-to", g.db, g.dir, version)
 }
 
-func (g *Goose) Version() error {
+func (g Goose) Version() error {
 	return orig.Run("version", g.db, g.dir)
 }

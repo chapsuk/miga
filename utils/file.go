@@ -3,22 +3,30 @@ package utils
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/chapsuk/miga/logger"
 )
 
-func CreateMigrationsFiles(dir, name, ext string) error {
-	timestamp := time.Now().Unix()
-	base := fmt.Sprintf("%v/%v_%v.", dir, timestamp, name)
-	os.MkdirAll(dir, os.ModePerm)
-
-	err := createFile(base + "up." + ext)
-	if err != nil {
-		return err
+func CreateMigrationsFiles(
+	version int64,
+	dir, name, ext string,
+) (upFileName, downFileName string, err error) {
+	if dir[len(dir)-1] != '/' {
+		dir += "/"
 	}
 
-	return createFile(base + "down." + ext)
+	upFileName = fmt.Sprintf("%v%v_%v.up.%s", dir, version, name, ext)
+	downFileName = fmt.Sprintf("%v%v_%v.down.%s", dir, version, name, ext)
+
+	os.MkdirAll(dir, os.ModePerm)
+
+	err = createFile(upFileName)
+	if err != nil {
+		return
+	}
+
+	err = createFile(downFileName)
+	return
 }
 
 func createFile(fname string) error {

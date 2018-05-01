@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/chapsuk/miga/logger"
 	"github.com/chapsuk/miga/utils"
@@ -71,8 +72,13 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 	}, nil
 }
 
+func (m Migrator) Close() error {
+	return m.db.Close()
+}
+
 func (m Migrator) Create(name, ext string) error {
-	return utils.CreateMigrationsFiles(m.dir, name, ext)
+	_, _, err := utils.CreateMigrationsFiles(time.Now().Unix(), m.dir, name, ext)
+	return err
 }
 
 func (m Migrator) Down() error {

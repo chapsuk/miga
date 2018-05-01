@@ -198,9 +198,11 @@ func TestMigrations(t *testing.T) {
 					VersionTableName: string(driverName) + "_db_version",
 				})
 				So(err, ShouldBeNil)
+				defer driverInst.Close()
 
 				db, err := sql.Open(dialect, string(dsns[dialect]))
 				So(err, ShouldBeNil)
+				defer db.Close()
 
 				for _, testCase := range migrationCases {
 					Convey(testCase.Description, func() {
