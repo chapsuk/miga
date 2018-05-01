@@ -7,9 +7,9 @@ postgres:
 #   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
 
 migrate:
-  path: ./test/migrations/goose
+  path: ./tests/migrations/goose
   table_name: goose_db_version
 
 seed:
-  path: ./seeds/goose
+  path: ./tests/seeds/goose
   table_name: seed_version
