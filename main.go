@@ -42,7 +42,19 @@ func main() {
 				EnvVars: []string{"MIGA_CONFIG"},
 			},
 		},
-		Before: initGlobalsFunc(),
+		Before: func(ctx *cli.Context) error {
+			err := logger.Init(
+				ctx.App.Name,
+				ctx.App.Version,
+				ctx.String("log.level"),
+				ctx.String("log.format"),
+			)
+			if err != nil {
+				panic("Init logger error: " + err.Error())
+			}
+
+			return config.Init(ctx.App.Name, ctx.String("config"))
+		},
 		Commands: []*cli.Command{
 			migrate.Command(),
 			seed.Command(),
@@ -51,21 +63,5 @@ func main() {
 
 	if err := app.Run(os.Args); err != nil {
 		logger.G().Error(err)
-	}
-}
-
-func initGlobalsFunc() func(*cli.Context) error {
-	return func(ctx *cli.Context) error {
-		err := logger.Init(
-			ctx.App.Name,
-			ctx.App.Version,
-			ctx.String("log.level"),
-			ctx.String("log.format"),
-		)
-		if err != nil {
-			panic("Init logger error: " + err.Error())
-		}
-
-		return config.Init(ctx.App.Name, ctx.String("config"))
 	}
 }
