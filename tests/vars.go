@@ -11,6 +11,7 @@ type (
 		Description string
 		Action      func(driver.Interface)
 		Assert      func(db *sql.DB)
+		Condition   func(driverName, dialect string) bool
 	}
 
 	dsn        string

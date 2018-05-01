@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/chapsuk/miga/driver"
 	. "github.com/smartystreets/goconvey/convey"
@@ -80,7 +81,7 @@ var migrationCases = []testCase{
 		},
 	},
 	{
-		Description: "#4 query with `;`",
+		Description: "#5 query with `;`",
 		Action: func(d driver.Interface) {
 			err := d.UpTo("4")
 			So(err, ShouldBeNil)
@@ -94,6 +95,37 @@ var migrationCases = []testCase{
 			}
 			So(count, ShouldEqual, 1)
 			So(r.Err(), ShouldBeNil)
+		},
+	},
+	{
+		Description: "#6 plpsql statement, should create histories table and func for create inheritans",
+		Action: func(d driver.Interface) {
+			err := d.UpTo("5")
+			So(err, ShouldBeNil)
+		},
+		Assert: func(db *sql.DB) {
+			r, err := db.Query("SELECT COUNT(*) FROM histories")
+			So(err, ShouldBeNil)
+			count := 1
+			for r.Next() {
+				r.Scan(&count)
+			}
+			So(r.Err(), ShouldBeNil)
+			So(count, ShouldEqual, 0)
+
+			_, err = db.Query("SELECT histories_partition_creation('now', 'now');")
+			So(r.Err(), ShouldBeNil)
+
+			r, err = db.Query(fmt.Sprintf("SELECT COUNT(*) FROM histories_%d_%02d", time.Now().Year(), time.Now().Month()))
+			So(err, ShouldBeNil)
+			for r.Next() {
+				r.Scan(&count)
+			}
+			So(r.Err(), ShouldBeNil)
+			So(count, ShouldEqual, 0)
+		},
+		Condition: func(driverName, dialect string) bool {
+			return dialect == "postgres"
 		},
 	},
 	{
@@ -222,6 +254,12 @@ func TestMigrations(t *testing.T) {
 				defer db.Close()
 
 				for _, testCase := range migrationCases {
+					if testCase.Condition != nil {
+						if !testCase.Condition(string(driverName), dialect) {
+							continue
+						}
+					}
+
 					Convey(testCase.Description, func() {
 						testCase.Action(driverInst)
 						testCase.Assert(db)

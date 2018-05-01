@@ -20,12 +20,12 @@ func TestConvert(t *testing.T) {
 					continue
 				}
 
-				sdir := "./migrations/" + string(driverName)
-				tdir := "./migrations/tmp/" + string(tdriverName)
+				sdir := "./migrations/" + string(tdriverName)
+				tdir := "./migrations/tmp/" + string(driverName)
 
 				legend := fmt.Sprintf("Convert from %s to %s source: %s dest: %s",
-					strings.ToUpper(string(driverName)),
 					strings.ToUpper(string(tdriverName)),
+					strings.ToUpper(string(driverName)),
 					sdir, tdir)
 
 				Convey(legend, t, func() {
@@ -33,23 +33,23 @@ func TestConvert(t *testing.T) {
 					So(err, ShouldBeNil)
 
 					err = converter.Convert(
-						string(driverName),
 						string(tdriverName),
+						string(driverName),
 						sdir, tdir)
 					So(err, ShouldBeNil)
 
 					desc := fmt.Sprintf("Given migrations %s driver with %s dialect",
-						strings.ToUpper(string(tdriverName)),
+						strings.ToUpper(string(driverName)),
 						strings.ToUpper(dialect),
 					)
 
 					Convey(desc, func() {
 						driverInst, err := driver.New(&driver.Config{
-							Name:             string(tdriverName),
+							Name:             string(driverName),
 							Dialect:          dialect,
 							Dsn:              string(dsns[dialect]),
 							Dir:              tdir,
-							VersionTableName: string(tdriverName) + "_db_version",
+							VersionTableName: string(driverName) + "_db_version",
 						})
 						So(err, ShouldBeNil)
 						defer driverInst.Close()
@@ -59,6 +59,12 @@ func TestConvert(t *testing.T) {
 						defer db.Close()
 
 						for _, testCase := range migrationCases {
+							if testCase.Condition != nil {
+								if !testCase.Condition(string(driverName), dialect) {
+									continue
+								}
+							}
+
 							Convey(testCase.Description, func() {
 								testCase.Action(driverInst)
 								testCase.Assert(db)

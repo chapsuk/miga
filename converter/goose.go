@@ -14,6 +14,9 @@ import (
 var (
 	gooseUpPrefix   = "-- +goose Up\n"
 	gooseDownPrefix = "-- +goose Down\n"
+
+	gooseStatementBegin = "-- +goose StatementBegin\n"
+	gooseStatementEnd   = "-- +goose StatementEnd\n"
 )
 
 type GooseFormatter struct{}
@@ -59,10 +62,10 @@ func (f *GooseFormatter) Read(src string) ([]Task, error) {
 		p := bytes.Split(b, []byte(gooseDownPrefix))
 		switch len(p) {
 		case 2:
-			task.Down = p[1]
+			task.Down = removeGooseArtifacts(p[1])
 			fallthrough
 		case 1:
-			task.Up = bytes.Replace(p[0], []byte(gooseUpPrefix), []byte(""), 1)
+			task.Up = removeGooseArtifacts(p[0])
 		default:
 			logger.G().Errorf("incorrect goose migration file %s body: %s", file, b)
 			continue
@@ -79,10 +82,15 @@ func (f *GooseFormatter) Write(dest string, tasks []Task) error {
 		filename := fmt.Sprintf("%05v_%s.sql", t.Version, t.Name)
 
 		body := bytes.NewBuffer([]byte(gooseUpPrefix))
+		body.Write([]byte(gooseStatementBegin))
 		body.Write(t.Up)
 		body.Write([]byte("\n"))
+		body.Write([]byte(gooseStatementEnd))
 		body.Write([]byte(gooseDownPrefix))
+		body.Write([]byte(gooseStatementBegin))
 		body.Write(t.Down)
+		body.Write([]byte("\n"))
+		body.Write([]byte(gooseStatementEnd))
 
 		fpath := dest + "/" + filename
 		err := ioutil.WriteFile(fpath, body.Bytes(), 0755)
@@ -92,4 +100,12 @@ func (f *GooseFormatter) Write(dest string, tasks []Task) error {
 		logger.G().Infof("%s file created", fpath)
 	}
 	return nil
+}
+
+func removeGooseArtifacts(body []byte) []byte {
+	body = bytes.Replace(body, []byte(gooseUpPrefix), []byte(""), 1)
+	body = bytes.Replace(body, []byte(gooseDownPrefix), []byte(""), 1)
+	body = bytes.Replace(body, []byte(gooseStatementBegin), []byte(""), 1)
+	body = bytes.Replace(body, []byte(gooseStatementEnd), []byte(""), 1)
+	return body
 }

@@ -2,10 +2,25 @@ NAME = miga
 VERSION ?= develop
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
+IMAGE_NAME = chapsuk/$(NAME)
 
 .PHONY: build
 build:
 	go build -o bin/$(NAME) -ldflags "-X main.Version=${VERSION}" main.go
+
+.PHONY: docker_build
+docker_build:
+	docker build -t $(IMAGE_NAME):$(VERSION) .
+
+release: docker_build
+	docker tag $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
+	docker push $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
+
+.PHONY: db_up
+db_up: postgres_up mysql_up
+
+.PHONY: db_down
+db_down: postgres_down mysql_down
 
 .PHONY: postgres_up
 postgres_up: postgres_down
@@ -33,9 +48,3 @@ mysql_up: mysql_down
 .PHONY: mysql_down
 mysql_down:
 	-docker rm -f $(MYSQL_CONTAINER_NAME)
-
-.PHONY: db_up
-db_up: postgres_up mysql_up
-
-.PHONY: db_down
-db_down: postgres_down mysql_down
