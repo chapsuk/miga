@@ -80,6 +80,23 @@ var migrationCases = []testCase{
 		},
 	},
 	{
+		Description: "#4 query with `;`",
+		Action: func(d driver.Interface) {
+			err := d.UpTo("4")
+			So(err, ShouldBeNil)
+		},
+		Assert: func(db *sql.DB) {
+			r, err := db.Query("SELECT COUNT(*) FROM users WHERE name='Abib;Rabib'")
+			So(err, ShouldBeNil)
+			count := 1
+			for r.Next() {
+				r.Scan(&count)
+			}
+			So(count, ShouldEqual, 1)
+			So(r.Err(), ShouldBeNil)
+		},
+	},
+	{
 		Description: "#101 incorrect migration (duplicate of 3 migration)",
 		Action: func(d driver.Interface) {
 			err := d.UpTo("101")
