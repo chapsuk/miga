@@ -1,14 +1,14 @@
 driver: goose
 
-# postgres:
-#   dsn: "host=127.0.0.1 user=user password=password port=5432 sslmode=disable database=miga"
+postgres:
+  dsn: "host=127.0.0.1 user=user password=password port=5432 sslmode=disable database=miga"
 
-mysql:
-  dsn: "user:password@tcp(127.0.0.1:3306)/miga"
+# mysql:
+#   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
 
 migrate:
-  path: ./migrations/goose
-  table_name: db_version
+  path: ./test/migrations/goose
+  table_name: goose_db_version
 
 seed:
   path: ./seeds/goose

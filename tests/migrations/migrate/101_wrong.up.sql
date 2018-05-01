@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN email VARCHAR;
+DROP TABLE foo;

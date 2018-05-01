@@ -63,7 +63,7 @@ func initGlobalsFunc() func(*cli.Context) error {
 			ctx.String("log.format"),
 		)
 		if err != nil {
-			return err
+			panic("Init logger error: " + err.Error())
 		}
 
 		return config.Init(ctx.App.Name, ctx.String("config"))
