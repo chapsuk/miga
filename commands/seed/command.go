@@ -21,6 +21,14 @@ func Command() *cli.Command {
 		},
 		Subcommands: []*cli.Command{
 			&cli.Command{
+				Name:      "convert",
+				Usage:     "Converting seeds to another format",
+				ArgsUsage: "FROM TO DESTENITION_PATH",
+				Action: func(ctx *cli.Context) error {
+					return commands.Convert(ctx, config.MigrateDriverConfig())
+				},
+			},
+			&cli.Command{
 				Name:      "create",
 				Usage:     "Creates new seed sql file with next version",
 				ArgsUsage: "NAME",

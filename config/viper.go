@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/chapsuk/miga/driver"
 	"github.com/spf13/viper"
@@ -19,9 +20,12 @@ func Init(appName, cfg string) error {
 		return err
 	}
 
-	driverName := "goose"
+	driverName := driver.Goose
 	if viper.IsSet("driver") {
 		driverName = viper.GetString("driver")
+		if !driver.Available(driverName) {
+			return fmt.Errorf("unsupported driver %s", driverName)
+		}
 	}
 
 	migrateConfig = &driver.Config{

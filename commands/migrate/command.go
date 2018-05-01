@@ -21,6 +21,14 @@ func Command() *cli.Command {
 		},
 		Subcommands: []*cli.Command{
 			&cli.Command{
+				Name:      "convert",
+				Usage:     "Converting migrations FROM_FORMAT to TO_FORMAT and store to DESTENITION_PATH",
+				ArgsUsage: "FROM_FORMAT TO_FORMAT DESTENITION_PATH",
+				Action: func(ctx *cli.Context) error {
+					return commands.Convert(ctx, config.MigrateDriverConfig())
+				},
+			},
+			&cli.Command{
 				Name:      "create",
 				Usage:     "Creates new migration sql file",
 				ArgsUsage: "NAME",

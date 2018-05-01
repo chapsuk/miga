@@ -7,6 +7,21 @@ import (
 	"github.com/chapsuk/miga/driver/migrate"
 )
 
+const (
+	Goose   = "goose"
+	Migrate = "migrate"
+)
+
+func Available(name string) bool {
+	switch name {
+	case Goose:
+	case Migrate:
+	default:
+		return false
+	}
+	return true
+}
+
 type Config struct {
 	Name string
 
@@ -30,14 +45,14 @@ type Interface interface {
 
 func New(cfg *Config) (Interface, error) {
 	switch cfg.Name {
-	case "goose":
+	case Goose:
 		return goose.New(
 			cfg.Dialect,
 			cfg.Dsn,
 			cfg.VersionTableName,
 			cfg.Dir,
 		)
-	case "migrate":
+	case Migrate:
 		return migrate.New(
 			cfg.Dialect,
 			cfg.Dsn,
