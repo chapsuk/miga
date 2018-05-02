@@ -12,14 +12,13 @@ var migrator driver.Interface
 // Command returns migration CLI command
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:    "migrate",
-		Aliases: []string{"m"},
-		Usage:   "Migrations root command",
+		Name:  "migrate",
+		Usage: "Migrations root command",
 		Before: func(ctx *cli.Context) (err error) {
 			migrator, err = driver.New(config.MigrateDriverConfig())
 			return
 		},
-		Subcommands: []*cli.Command{
+		Subcommands: cli.CommandsByName([]*cli.Command{
 			&cli.Command{
 				Name:      "convert",
 				Usage:     "Converting migrations FROM_FORMAT to TO_FORMAT and store to DESTENITION_PATH",
@@ -101,6 +100,6 @@ func Command() *cli.Command {
 					return commands.Version(ctx, migrator)
 				},
 			},
-		},
+		}),
 	}
 }

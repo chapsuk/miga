@@ -3,29 +3,38 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/chapsuk/miga/driver"
+	"github.com/chapsuk/miga/logger"
 	"github.com/spf13/viper"
 )
 
 var migrateConfig, seedConfig *driver.Config
 
 // Init configuration with viper
-func Init(appName, cfg string) error {
+func Init(appName, cfg, driverName string) error {
 	viper.SetConfigFile(cfg)
 	viper.SetEnvPrefix(appName)
 	viper.AutomaticEnv()
+
 	err := viper.ReadInConfig()
 	if err != nil {
-		return err
+		if !os.IsNotExist(err) {
+			return err
+		}
+		logger.G().Warnf("missing config file: %s", err)
 	}
 
-	driverName := driver.Goose
-	if viper.IsSet("driver") {
+	if driverName == "" {
 		driverName = viper.GetString("driver")
-		if !driver.Available(driverName) {
-			return fmt.Errorf("unsupported driver %s", driverName)
+		if viper.IsSet("driver") {
+			driverName = driver.Goose
 		}
+	}
+
+	if !driver.Available(driverName) {
+		return fmt.Errorf("unsupported driver %s", driverName)
 	}
 
 	migrateConfig = &driver.Config{

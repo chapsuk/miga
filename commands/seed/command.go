@@ -12,14 +12,13 @@ var seeder driver.Interface
 // Command returns seed CLI command
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:    "seed",
-		Aliases: []string{"s"},
-		Usage:   "Seeding root command, see",
+		Name:  "seed",
+		Usage: "Seeding root command, see",
 		Before: func(ctx *cli.Context) (err error) {
 			seeder, err = driver.New(config.SeedDriverConfig())
 			return
 		},
-		Subcommands: []*cli.Command{
+		Subcommands: cli.CommandsByName([]*cli.Command{
 			&cli.Command{
 				Name:      "convert",
 				Usage:     "Converting seeds to another format",
@@ -94,6 +93,6 @@ func Command() *cli.Command {
 					return commands.Version(ctx, seeder)
 				},
 			},
-		},
+		}),
 	}
 }

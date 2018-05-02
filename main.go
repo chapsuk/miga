@@ -22,7 +22,20 @@ func main() {
 	app := cli.App{
 		Name:    Name,
 		Version: Version,
+		Usage:   "Single CLI for several packages of migration ",
 		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Value:   "miga.yml",
+				Usage:   "Config file name",
+				EnvVars: []string{"MIGA_CONFIG"},
+			},
+			&cli.StringFlag{
+				Name:    "driver",
+				Value:   "goose",
+				Usage:   "Migration driver name: goose, migrate, stump",
+				EnvVars: []string{"MIGA_DRIVER"},
+			},
 			&cli.StringFlag{
 				Name:    "log.level",
 				Value:   "debug",
@@ -34,12 +47,6 @@ func main() {
 				Value:   "console",
 				Usage:   "Logger output format console|json",
 				EnvVars: []string{"MIGA_LOG.FORMAT"},
-			},
-			&cli.StringFlag{
-				Name:    "config",
-				Value:   "miga.yml",
-				Usage:   "Config file name",
-				EnvVars: []string{"MIGA_CONFIG"},
 			},
 		},
 		Before: func(ctx *cli.Context) error {
@@ -53,7 +60,7 @@ func main() {
 				panic("Init logger error: " + err.Error())
 			}
 
-			return config.Init(ctx.App.Name, ctx.String("config"))
+			return config.Init(ctx.App.Name, ctx.String("config"), ctx.String("driver"))
 		},
 		Commands: []*cli.Command{
 			migrate.Command(),

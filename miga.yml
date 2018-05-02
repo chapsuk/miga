@@ -1,4 +1,4 @@
-driver: stump
+driver: goose
 
 postgres:
   dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
@@ -7,9 +7,9 @@ postgres:
 #   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
 
 migrate:
-  path: ./tests/migrations/stump
-  table_name: stump_db_version
+  path: ./tests/migrations/goose
+  table_name: db_version
 
 seed:
-  path: ./tests/seeds/stump
-  table_name: stump_seed_version
+  path: ./tests/seeds/goose
+  table_name: seed_version
