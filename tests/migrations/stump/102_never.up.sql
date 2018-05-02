@@ -1,0 +1,3 @@
+CREATE TABLE never (
+    id INT PRIMARY KEY
+);

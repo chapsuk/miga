@@ -23,10 +23,11 @@ var (
 	drivers = map[driverName]dialects{
 		"goose":   []string{"mysql", "postgres"},
 		"migrate": []string{"mysql", "postgres"},
+		"stump":   []string{"postgres"},
 	}
 
 	dsns = map[string]dsn{
-		"postgres": "host=127.0.0.1 user=user password=password port=5432 sslmode=disable database=miga",
+		"postgres": "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable",
 		"mysql":    "user:password@tcp(127.0.0.1:3306)/miga",
 	}
 )

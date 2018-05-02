@@ -60,6 +60,8 @@ func createFormatter(name string) (Formatter, error) {
 		return &GooseFormatter{}, nil
 	case driver.Migrate:
 		return &MigrateFormatter{}, nil
+	case driver.Stump:
+		return &MigrateFormatter{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported driver name %s", name)
 	}
