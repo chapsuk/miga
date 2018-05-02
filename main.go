@@ -40,13 +40,13 @@ func main() {
 				Name:    "log.level",
 				Value:   "debug",
 				Usage:   "Logger level [debug|info|...]",
-				EnvVars: []string{"MIGA_LOG.LEVEL"},
+				EnvVars: []string{"MIGA_LOG_LEVEL"},
 			},
 			&cli.StringFlag{
 				Name:    "log.format",
 				Value:   "console",
 				Usage:   "Logger output format console|json",
-				EnvVars: []string{"MIGA_LOG.FORMAT"},
+				EnvVars: []string{"MIGA_LOG_FORMAT"},
 			},
 		},
 		Before: func(ctx *cli.Context) error {

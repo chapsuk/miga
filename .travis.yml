@@ -1,0 +1,21 @@
+language: go
+
+go:
+  - 1.10.x
+
+services:
+  - mysql
+  - postgres
+
+before_install:
+  - mysql -e "CREATE DATABASE miga;"
+  - mysql -e "CREATE USER user@localhost IDENTIFIED BY 'password'";
+  - mysql -e "GRANT ALL ON miga.* TO user@localhost";
+  - psql -U postgres -c 'CREATE DATABASE miga;'
+  - psql -U postgres -c "CREATE USER \"user\" WITH PASSWORD 'password'";
+
+install:
+  - make build
+
+script:
+  - go test -v ./...

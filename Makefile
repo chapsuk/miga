@@ -4,6 +4,9 @@ PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 IMAGE_NAME = chapsuk/$(NAME)
 
+TRAVIS_POSTGRES = postgres://postgres:@127.0.0.1:5432/miga?sslmode=disable
+TRAVIS_MYSQL = travis:@tcp(127.0.0.1:3306)/miga
+
 .PHONY: build
 build:
 	go build -o bin/$(NAME) -ldflags "-X main.Version=${VERSION}" main.go

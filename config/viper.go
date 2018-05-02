@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/chapsuk/miga/driver"
 	"github.com/chapsuk/miga/logger"
@@ -17,6 +18,7 @@ func Init(appName, cfg, driverName string) error {
 	viper.SetConfigFile(cfg)
 	viper.SetEnvPrefix(appName)
 	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	err := viper.ReadInConfig()
 	if err != nil {

@@ -1,5 +1,7 @@
 # miga
 
+[![Build Status](https://travis-ci.com/chapsuk/miga.svg?token=m33r59zSHRPMSbqfFKFk&branch=master)](https://travis-ci.com/chapsuk/miga)
+
 Miga is a command line utility around several migration packages with single interface.
 Aimed to add extra features and hide some limitations of existing golang migration CLI`s.
 
@@ -28,7 +30,7 @@ stump       |    ?    |  :heavy_check_mark: | :heavy_minus_sign:
 Miga CLI inherit from goose CLI and may not be familiar to users of other utilities.
 See commands description before usage
 
-```bash
+```
 ≻ ./bin/miga migrate
 NAME:
    miga migrate - Migrations root command
@@ -70,13 +72,13 @@ Name                        | SettingDefault | Description
 MIGA_CONFIG                 | miga.yml       | config file
 MIGA_DRIVER                 | goose          | one from [list](#supporting)
 MIGA_POSTGRES.DSN           |                | postgres DSN string
-MIGA_MYSQL.DSN              |                | mysql DSN string
-MIGA_MIGRATION.PATH         | ./migrations   | migrations dir
-MIGA_MIGRATION.TABLE_NAME   | db_version     | migrations db version table name
-MIGA_SEED.PATH              | ./seeds        | seeds dir
-MIGA_SEED.TABLE_NAME        | seed_version   | seeds version table name
-MIGA_LOG.LEVEL              | info           | logging level
-MIGA_LOG.FORMAT             | console        | logging format (console or json)
+MIGA_MYSQL_DSN              |                | mysql DSN string
+MIGA_MIGRATION_PATH         | ./migrations   | migrations dir
+MIGA_MIGRATION_TABLE_NAME   | db_version     | migrations db version table name
+MIGA_SEED_PATH              | ./seeds        | seeds dir
+MIGA_SEED_TABLE_NAME        | seed_version   | seeds version table name
+MIGA_LOG_LEVEL              | info           | logging level
+MIGA_LOG_FORMAT             | console        | logging format (console or json)
 
 *prefix `MIGA` may be changed by build flag `-ldflags "-X main.Name=<NAME>"`)
 
