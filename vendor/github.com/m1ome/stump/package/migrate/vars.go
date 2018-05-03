@@ -43,7 +43,3 @@ var (
 	// ErrPositiveSteps when steps < 0
 	ErrPositiveSteps = errors.New("steps must be a positive number")
 )
-
-func SetDBVersionTableName(name string) {
-	tableName = name
-}

@@ -43,7 +43,7 @@
 
 [[constraint]]
   name = "github.com/pressly/goose"
-  version = "2.2.0"
+  version = "2.3.0"
 
 [[constraint]]
   name = "github.com/smartystreets/goconvey"

@@ -18,7 +18,7 @@ func Available(name string) bool {
 	switch name {
 	case Goose:
 	case Migrate:
-	case Stump:
+	// case Stump:
 	default:
 		return false
 	}
