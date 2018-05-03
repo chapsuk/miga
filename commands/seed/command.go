@@ -29,8 +29,8 @@ func Command() *cli.Command {
 			},
 			&cli.Command{
 				Name:      "create",
-				Usage:     "Creates new seed sql file with next version",
-				ArgsUsage: "NAME",
+				Usage:     "Creates new seed sql|go file with next version",
+				ArgsUsage: "NAME EXT",
 				Action: func(ctx *cli.Context) error {
 					return commands.Create(ctx, seeder)
 				},
