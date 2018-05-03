@@ -13,9 +13,8 @@ go get -u github.com/chapsuk/miga
 
 PackageName | Version | Postgres            | MySQL
 ----------- | ------- | ------------------- | --------
-goose       |    ?    |  :heavy_check_mark: | :heavy_check_mark:
-migrate     |   3.2.0 |  :heavy_check_mark: | :heavy_check_mark:
-stump       |    ?    |  :heavy_check_mark: | :heavy_minus_sign:
+goose       |  2.3.0  |  :heavy_check_mark: | :heavy_check_mark:
+migrate     |  3.2.0  |  :heavy_check_mark: | :heavy_check_mark:
 
 ## Features
 
@@ -143,10 +142,3 @@ seed:
 PASS
 ok  	github.com/chapsuk/miga/tests	10.521s
 ```
-
-## !WARN
-
-Vendor locked until:
-
-* [goose - table name](https://github.com/pressly/goose/pull/104)
-* [stump - table name](https://github.com/m1ome/stump/pull/6)

@@ -18,7 +18,7 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 		return nil, err
 	}
 
-	orig.SetDBVersionTableName(tableName)
+	orig.SetTableName(tableName)
 	orig.SetLogger(&utils.StdLogger{})
 
 	db, err := sql.Open(dialect, dsn)
