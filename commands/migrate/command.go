@@ -29,8 +29,8 @@ func Command() *cli.Command {
 			},
 			&cli.Command{
 				Name:      "create",
-				Usage:     "Creates new migration sql file",
-				ArgsUsage: "NAME",
+				Usage:     "Creates new migration sql|go file",
+				ArgsUsage: "NAME EXT",
 				Action: func(ctx *cli.Context) error {
 					return commands.Create(ctx, migrator)
 				},

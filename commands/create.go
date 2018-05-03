@@ -14,13 +14,13 @@ func Create(ctx *cli.Context, d driver.Interface) error {
 		return errors.New("NAME required")
 	}
 
-	// ext := ctx.Args().Get(1)
-	// switch ext {
-	// case "sql":
-	// case "go":
-	// default:
-	// 	ext = "sql"
-	// }
+	ext := ctx.Args().Get(1)
+	switch ext {
+	case "sql":
+	case "go":
+	default:
+		ext = "sql"
+	}
 
-	return d.Create(name, "sql")
+	return d.Create(name, ext)
 }
