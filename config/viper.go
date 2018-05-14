@@ -30,7 +30,7 @@ func Init(appName, cfg, driverName string) error {
 
 	if driverName == "" {
 		driverName = viper.GetString("driver")
-		if viper.IsSet("driver") {
+		if !viper.IsSet("driver") {
 			driverName = driver.Goose
 		}
 	}

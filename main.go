@@ -32,8 +32,8 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:    "driver",
-				Value:   "goose",
-				Usage:   "Migration driver name: goose, migrate, stump",
+				Value:   "",
+				Usage:   "Migration driver name: goose, migrate",
 				EnvVars: []string{"MIGA_DRIVER"},
 			},
 			&cli.StringFlag{
