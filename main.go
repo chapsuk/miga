@@ -26,7 +26,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
-				Value:   "miga.yml",
+				Value:   "",
 				Usage:   "Config file name",
 				EnvVars: []string{"MIGA_CONFIG"},
 			},

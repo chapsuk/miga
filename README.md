@@ -33,7 +33,7 @@ migrate     |  3.2.0  |  :heavy_check_mark: | :heavy_check_mark:
 Miga CLI inherit from goose CLI and may not be familiar to users of other utilities.
 See commands description before usage
 
-```
+```text
 ≻ ./bin/miga migrate
 NAME:
    miga migrate - Migrations root command
@@ -53,22 +53,22 @@ COMMANDS:
      up-to    Migrate the DB to a specific VERSION
      version  Print the current version of the database
      help, h  Shows a list of commands or help for one command
-``` 
+```
 
 ## Configuration
 
 Miga has 3 level configuration options by priority:
 
-#### Flags
+### Flags
 
-```
---config value      Config file name (default: "miga.yml")
+```bash
+--config value      Config file name (default: "")
 --driver value      Migration driver name: goose, migrate, stump (default: "goose")
 --log.level value   Logger level [debug|info|...] (default: "debug")
---log.format value  Logger output format console|json (default: "console") 
+--log.format value  Logger output format console|json (default: "console")
 ```
 
-#### Environment variables 
+### Environment variables
 
 Name                        | SettingDefault | Description
 --------------------------- | -------------- | -----------------------
@@ -85,7 +85,7 @@ MIGA_LOG_FORMAT             | console        | logging format (console or json)
 
 *prefix `MIGA` may be changed by build flag `-ldflags "-X main.Name=<NAME>"`)
 
-#### Config file
+### Config file
 
 ```yml
 driver: goose
@@ -101,9 +101,18 @@ seed:
   table_name: seed_version
 ```
 
+### Using without config
+
+```bash
+> MIGA_POSTGRES_DSN="postgres://user:password@127.0.0.1:5432/miga?sslmode=disable" \
+  MIGA_MIGRATE_PATH=./tests/migrations/goose/ \
+  MIGA_SEED_PATH=./tests/seeds/goose \
+  miga --driver goose migrate up
+```
+
 ## Tests
 
-```
+```text
 ≻ make db_up
 ≻ GOCACHE=off go test -v ./tests/
 === RUN   TestConvert
@@ -144,5 +153,5 @@ seed:
 
 --- PASS: TestMigrations (3.35s)
 PASS
-ok  	github.com/chapsuk/miga/tests	10.521s
+ok    github.com/chapsuk/miga/tests	10.521s
 ```

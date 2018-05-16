@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/chapsuk/miga/driver"
@@ -22,10 +21,10 @@ func Init(appName, cfg, driverName string) error {
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !strings.Contains(err.Error(), "Not Found") {
 			return err
 		}
-		logger.G().Warnf("missing config file: %s", err)
+		logger.G().Warnf("Missing config file: %s", err)
 	}
 
 	if driverName == "" {
@@ -34,10 +33,10 @@ func Init(appName, cfg, driverName string) error {
 			driverName = driver.Goose
 		}
 	}
-
 	if !driver.Available(driverName) {
-		return fmt.Errorf("unsupported driver %s", driverName)
+		return fmt.Errorf("Unsupported driver %s", driverName)
 	}
+	logger.G().Infof("Using %s driver", driverName)
 
 	migrateConfig = &driver.Config{
 		Name:             driverName,
@@ -65,7 +64,7 @@ func Init(appName, cfg, driverName string) error {
 		seedConfig.Dir = viper.GetString("seed.path")
 	}
 
-	if viper.IsSet("postgres") {
+	if viper.IsSet("postgres.dsn") {
 		migrateConfig.Dialect = "postgres"
 		migrateConfig.Dsn = viper.GetString("postgres.dsn")
 		seedConfig.Dialect = "postgres"
@@ -73,7 +72,7 @@ func Init(appName, cfg, driverName string) error {
 		return nil
 	}
 
-	if viper.IsSet("mysql") {
+	if viper.IsSet("mysql.dsn") {
 		migrateConfig.Dialect = "mysql"
 		migrateConfig.Dsn = viper.GetString("mysql.dsn")
 		seedConfig.Dialect = "mysql"
