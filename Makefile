@@ -9,15 +9,16 @@ TRAVIS_MYSQL = travis:@tcp(127.0.0.1:3306)/miga
 
 .PHONY: build
 build:
-	go build -o bin/$(NAME) -ldflags "-X main.Version=${VERSION}" main.go
+	go build -o bin/$(NAME) -ldflags "-X main.Version=$(VERSION)" main.go
 
 .PHONY: docker_build
 docker_build:
-	docker build -t $(IMAGE_NAME):$(VERSION) .
+	docker build -t $(IMAGE_NAME):$(VERSION) --build-arg VERSION=$(VERSION) .
 
 release: docker_build
 	docker tag $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
-	docker push $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
+	docker push $(IMAGE_NAME):$(VERSION) 
+	docker push $(IMAGE_NAME):latest
 
 .PHONY: db_up
 db_up: postgres_up mysql_up

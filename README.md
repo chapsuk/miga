@@ -5,8 +5,12 @@
 Miga is a command line utility around several migration packages with single interface.
 Aimed to add extra features and hide some limitations of existing golang migration CLI`s.
 
-```bash
-go get -u github.com/chapsuk/miga
+```command
+> go get -u github.com/chapsuk/miga
+```
+
+```command
+> docker run -it chapsuk/miga miga --help
 ```
 
 ## Supporting
