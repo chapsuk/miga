@@ -40,7 +40,7 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 		return nil, err
 	}
 
-	// orig.SetTableName(tableName)
+	orig.SetTableName(tableName)
 
 	return &Migrator{
 		stump: s,
