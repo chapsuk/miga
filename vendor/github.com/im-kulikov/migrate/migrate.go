@@ -11,6 +11,7 @@ import (
 	"github.com/go-pg/pg/orm"
 )
 
+// Logger interface for migrator
 type Logger interface {
 	Infof(format string, args ...interface{})
 }

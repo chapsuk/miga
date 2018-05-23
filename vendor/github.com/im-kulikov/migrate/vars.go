@@ -34,8 +34,6 @@ var (
 
 	// ErrNoDB set to Options
 	ErrNoDB = fmt.Errorf("no db")
-	// ErrNoLogger set to Options
-	ErrNoLogger = fmt.Errorf("no logger")
 	// ErrDirNotExists when migration path not exists
 	ErrDirNotExists = fmt.Errorf("migrations dir not exists")
 	// ErrBothMigrateTypes when up or down migration file not found
@@ -43,3 +41,8 @@ var (
 	// ErrPositiveSteps when steps < 0
 	ErrPositiveSteps = errors.New("steps must be a positive number")
 )
+
+// SetTableName for migrations
+func SetTableName(name string) {
+	tableName = name
+}

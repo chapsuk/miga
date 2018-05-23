@@ -47,6 +47,7 @@ func (db *DB) Options() *Options {
 	return db.opt
 }
 
+// Context returns DB context.
 func (db *DB) Context() context.Context {
 	if db.ctx != nil {
 		return db.ctx
@@ -54,6 +55,7 @@ func (db *DB) Context() context.Context {
 	return context.Background()
 }
 
+// WithContext returns a copy of the DB that uses the ctx.
 func (db *DB) WithContext(ctx context.Context) *DB {
 	return &DB{
 		opt:   db.opt,
@@ -66,7 +68,7 @@ func (db *DB) WithContext(ctx context.Context) *DB {
 	}
 }
 
-// WithTimeout returns a DB that uses d as the read/write timeout.
+// WithTimeout returns a copy of the DB that uses d as the read/write timeout.
 func (db *DB) WithTimeout(d time.Duration) *DB {
 	newopt := *db.opt
 	newopt.ReadTimeout = d
@@ -83,7 +85,8 @@ func (db *DB) WithTimeout(d time.Duration) *DB {
 	}
 }
 
-// WithParam returns a DB that replaces the param with the value in queries.
+// WithParam returns a copy of the DB that replaces the param with the value
+// in queries.
 func (db *DB) WithParam(param string, value interface{}) *DB {
 	return &DB{
 		opt:   db.opt,
@@ -94,6 +97,11 @@ func (db *DB) WithParam(param string, value interface{}) *DB {
 
 		ctx: db.ctx,
 	}
+}
+
+// Param returns value for the param.
+func (db *DB) Param(param string) (interface{}, bool) {
+	return db.fmter.Param(param)
 }
 
 type PoolStats pool.Stats

@@ -16,7 +16,8 @@ const (
 )
 
 type Field struct {
-	Type reflect.Type
+	Field reflect.StructField
+	Type  reflect.Type
 
 	GoName   string  // struct field name, e.g. Id
 	SQLName  string  // SQL name, .e.g. id
@@ -47,9 +48,9 @@ func indexEqual(ind1, ind2 []int) bool {
 }
 
 func (f *Field) Copy() *Field {
-	copy := *f
-	copy.Index = copy.Index[:len(f.Index):len(f.Index)]
-	return &copy
+	cp := *f
+	cp.Index = cp.Index[:len(f.Index):len(f.Index)]
+	return &cp
 }
 
 func (f *Field) SetFlag(flag uint8) {
