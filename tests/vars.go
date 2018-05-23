@@ -23,7 +23,7 @@ var (
 	drivers = map[driverName]dialects{
 		"goose":   []string{"mysql", "postgres"},
 		"migrate": []string{"mysql", "postgres"},
-		// "stump":   []string{"postgres"},
+		"impg":    []string{"postgres"},
 	}
 
 	dsns = map[string]dsn{

@@ -1,4 +1,4 @@
-package stump
+package impg
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/chapsuk/miga/logger"
 	"github.com/chapsuk/miga/utils"
 	"github.com/go-pg/pg"
-	orig "github.com/m1ome/stump/package/migrate"
+	orig "github.com/im-kulikov/migrate"
 )
 
 type Migrator struct {

@@ -17,8 +17,10 @@ Aimed to add extra features and hide some limitations of existing golang migrati
 
 PackageName | Version | Postgres            | MySQL
 ----------- | ------- | ------------------- | --------
-goose       |  2.3.0  |  :heavy_check_mark: | :heavy_check_mark:
-migrate     |  3.2.0  |  :heavy_check_mark: | :heavy_check_mark:
+[goose](https://github.com/pressly/goose)       |  2.3.0  |  :heavy_check_mark: | :heavy_check_mark:
+[migrate](https://github.com/golang-migrate/migrate)     |  3.2.0  |  :heavy_check_mark: | :heavy_check_mark:
+[impg](https://github.com/im-kulikov/migrate)        |   0.1   |  :heavy_check_mark: 
+
 
 ## Features
 

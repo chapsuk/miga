@@ -17,8 +17,8 @@
     "orm",
     "types"
   ]
-  revision = "5b73ce88484575f3480edf393237f6bf79d5f166"
-  version = "v6.11.2"
+  revision = "1e63a7fcab7d4389be48b02a4997c87771fcfae8"
+  version = "v6.13.2"
 
 [[projects]]
   name = "github.com/go-sql-driver/mysql"
@@ -63,6 +63,12 @@
   revision = "ef8a98b0bbce4a65b5aa4c368430a80ddc533168"
 
 [[projects]]
+  name = "github.com/im-kulikov/migrate"
+  packages = ["."]
+  revision = "d4c757bb8788aab88714200b6cee2c32d1eb9954"
+  version = "0.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/jinzhu/inflection"
   packages = ["."]
@@ -82,12 +88,6 @@
     "oid"
   ]
   revision = "d34b9ff171c21ad295489235aec8b6626023cd04"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/m1ome/stump"
-  packages = ["package/migrate"]
-  revision = "a3828aa14114dd2ca24265a42ebc39d35fa73649"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -231,6 +231,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "66d45a0ecdfeb846cb107ab625eb44b570df0853ef23943c6f5138f3ede679f1"
+  inputs-digest = "86f56382f7ac9490aa2dea248cb88c3fc05ea35419a01a2ee3b0d406032d6b27"
   solver-name = "gps-cdcl"
   solver-version = 1

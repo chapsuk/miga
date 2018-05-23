@@ -4,21 +4,21 @@ import (
 	"errors"
 
 	"github.com/chapsuk/miga/driver/goose"
+	"github.com/chapsuk/miga/driver/impg"
 	"github.com/chapsuk/miga/driver/migrate"
-	"github.com/chapsuk/miga/driver/stump"
 )
 
 const (
 	Goose   = "goose"
 	Migrate = "migrate"
-	Stump   = "stump"
+	Impg    = "impg"
 )
 
 func Available(name string) bool {
 	switch name {
 	case Goose:
 	case Migrate:
-	// case Stump:
+	case Impg:
 	default:
 		return false
 	}
@@ -63,8 +63,8 @@ func New(cfg *Config) (Interface, error) {
 			cfg.VersionTableName,
 			cfg.Dir,
 		)
-	case Stump:
-		return stump.New(
+	case Impg:
+		return impg.New(
 			cfg.Dialect,
 			cfg.Dsn,
 			cfg.VersionTableName,
