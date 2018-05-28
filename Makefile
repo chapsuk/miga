@@ -9,7 +9,7 @@ TRAVIS_MYSQL = travis:@tcp(127.0.0.1:3306)/miga
 
 .PHONY: build
 build:
-	go build -o bin/$(NAME) -ldflags "-X main.Version=$(VERSION)" main.go
+	CGO_ENABLED=0 go build -v -o bin/$(NAME) -ldflags "-w -v -extldflags \"-static\" -X main.Version=$(VERSION)" main.go
 
 .PHONY: docker_build
 docker_build:
