@@ -24,7 +24,7 @@ func Init(appName, cfg, driverName string) error {
 		if !strings.Contains(err.Error(), "Not Found") {
 			return err
 		}
-		logger.G().Warnf("Missing config file: %s", err)
+		logger.G().Debugf("Missing config file: %s", err)
 	}
 
 	if driverName == "" {
