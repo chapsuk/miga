@@ -85,7 +85,7 @@ MIGA_SEED_TABLE_NAME        | seed_version   | seeds version table name
 MIGA_LOG_LEVEL              | info           | logging level
 MIGA_LOG_FORMAT             | console        | logging format (console or json)
 
-*prefix `MIGA` may be changed by build flag `-ldflags "-X main.Name=<NAME>"`)
+*prefix `MIGA` may be changed by build flag `-ldflags "-X main.Name=<NAME>"`
 
 ### Config file
 

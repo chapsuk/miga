@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/chapsuk/miga/commands/all"
 	"github.com/chapsuk/miga/commands/migrate"
 	"github.com/chapsuk/miga/commands/seed"
 	"github.com/chapsuk/miga/config"
@@ -63,6 +64,7 @@ func main() {
 			return config.Init(ctx.App.Name, ctx.String("config"), ctx.String("driver"))
 		},
 		Commands: []*cli.Command{
+			all.Command(),
 			migrate.Command(),
 			seed.Command(),
 		},
