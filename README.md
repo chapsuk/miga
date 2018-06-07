@@ -10,7 +10,7 @@ Aimed to add extra features and hide some limitations of existing golang migrati
 ```
 
 ```command
-> docker run -it chapsuk/miga miga --help
+> docker run -it chapsuk/miga --help
 ```
 
 ## Supporting
