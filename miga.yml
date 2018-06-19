@@ -1,7 +1,13 @@
 driver: goose
 
 postgres:
-  dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
+  # dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
+  user: user
+  password: password
+  host: 127.0.0.1
+  port: 5432
+  db: miga
+  options: sslmode=disable
 
 # mysql:
 #   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
