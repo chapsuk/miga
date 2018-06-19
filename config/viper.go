@@ -64,11 +64,24 @@ func Init(appName, cfg, driverName string) error {
 		seedConfig.Dir = viper.GetString("seed.path")
 	}
 
-	if viper.IsSet("postgres.dsn") {
+	if viper.IsSet("postgres.dsn") || viper.IsSet("postgres.host") {
+		dsn := viper.GetString("postgres.dsn")
+		if dsn == "" && viper.IsSet("postgres.host") {
+			dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s",
+				viper.GetString("postgres.user"),
+				viper.GetString("postgres.password"),
+				viper.GetString("postgres.host"),
+				viper.GetInt("postgres.port"),
+				viper.GetString("postgres.db"),
+				viper.GetString("postgres.options"),
+			)
+		}
+
 		migrateConfig.Dialect = "postgres"
-		migrateConfig.Dsn = viper.GetString("postgres.dsn")
+		migrateConfig.Dsn = dsn
 		seedConfig.Dialect = "postgres"
-		seedConfig.Dsn = viper.GetString("postgres.dsn")
+		seedConfig.Dsn = dsn
+
 		return nil
 	}
 
