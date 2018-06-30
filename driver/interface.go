@@ -25,27 +25,29 @@ func Available(name string) bool {
 	return true
 }
 
-type Config struct {
-	Name string
+type (
+	Config struct {
+		Name string
 
-	Dialect          string
-	Dsn              string
-	Dir              string
-	VersionTableName string
-}
+		Dialect          string
+		Dsn              string
+		Dir              string
+		VersionTableName string
+	}
 
-type Interface interface {
-	Create(name, ext string) error
-	Close() error
-	Down() error
-	DownTo(version string) error
-	Redo() error
-	Reset() error
-	Status() error
-	Up() error
-	UpTo(version string) error
-	Version() error
-}
+	Interface interface {
+		Create(name, ext string) error
+		Close() error
+		Down() error
+		DownTo(version string) error
+		Redo() error
+		Reset() error
+		Status() error
+		Up() error
+		UpTo(version string) error
+		Version() error
+	}
+)
 
 func New(cfg *Config) (Interface, error) {
 	switch cfg.Name {
@@ -73,4 +75,8 @@ func New(cfg *Config) (Interface, error) {
 	default:
 		return nil, errors.New("unsupported migrations driver")
 	}
+}
+
+func (c *Config) HasDBConfig() bool {
+	return c.Dsn != "" && c.Dialect != ""
 }

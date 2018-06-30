@@ -76,7 +76,7 @@ Name                        | SettingDefault | Description
 --------------------------- | -------------- | -----------------------
 MIGA_CONFIG                 | miga.yml       | config file
 MIGA_DRIVER                 | goose          | one from [list](#supporting)
-MIGA_POSTGRES.DSN           |                | postgres DSN string
+MIGA_POSTGRES_DSN           |                | postgres DSN string
 MIGA_MYSQL_DSN              |                | mysql DSN string
 MIGA_MIGRATION_PATH         | ./migrations   | migrations dir
 MIGA_MIGRATION_TABLE_NAME   | db_version     | migrations db version table name
