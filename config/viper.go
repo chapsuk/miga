@@ -61,7 +61,7 @@ func Init(appName, cfg, driverName string) error {
 	if viper.IsSet("migrate.path") {
 		migrateConfig.Dir = viper.GetString("migrate.path")
 	}
-	if viper.IsSet("seed.table_name") {
+	if viper.IsSet("seed.path") {
 		seedConfig.Dir = viper.GetString("seed.path")
 	}
 
