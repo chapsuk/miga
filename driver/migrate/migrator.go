@@ -19,6 +19,8 @@ import (
 	_ "github.com/golang-migrate/migrate/source/file"
 )
 
+var ErrMissingDBConfig = errors.New("missing db config for migrate driver")
+
 type Migrator struct {
 	backend *orig.Migrate
 	dir     string
@@ -30,6 +32,10 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 	db, err := sql.Open(dialect, dsn)
 	if err != nil {
 		return nil, err
+	}
+
+	if dsn == "" {
+		return &Migrator{dir: dir}, nil
 	}
 
 	var driver database.Driver
@@ -73,6 +79,9 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 }
 
 func (m Migrator) Close() error {
+	if m.db == nil {
+		return nil
+	}
 	return m.db.Close()
 }
 
@@ -82,10 +91,16 @@ func (m Migrator) Create(name, ext string) error {
 }
 
 func (m Migrator) Down() error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	return m.fixDirtyState(m.backend.Steps(-1))
 }
 
 func (m Migrator) DownTo(version string) error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	v, err := versionToUint(version)
 	if err != nil {
 		return err
@@ -100,6 +115,9 @@ func (m Migrator) DownTo(version string) error {
 }
 
 func (m Migrator) Redo() error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	err := m.backend.Steps(-1)
 	if err != nil {
 		return m.fixDirtyState(err)
@@ -109,6 +127,9 @@ func (m Migrator) Redo() error {
 }
 
 func (m Migrator) Reset() error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	return m.fixDirtyState(m.backend.Down())
 }
 
@@ -117,10 +138,16 @@ func (m Migrator) Status() error {
 }
 
 func (m Migrator) Up() error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	return m.fixDirtyState(m.backend.Up())
 }
 
 func (m Migrator) UpTo(version string) error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	v, err := versionToUint(version)
 	if err != nil {
 		return err
@@ -135,6 +162,9 @@ func (m Migrator) UpTo(version string) error {
 }
 
 func (m Migrator) Version() error {
+	if m.db == nil {
+		return ErrMissingDBConfig
+	}
 	version, dirty, err := m.backend.Version()
 	if err != nil {
 		return err

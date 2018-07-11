@@ -1,6 +1,7 @@
 package impg
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,15 +13,22 @@ import (
 	orig "github.com/im-kulikov/migrate"
 )
 
+var ErrMissingDBConfig = errors.New("missing DB config for impg driver")
+
 type Migrator struct {
-	stump orig.Migrator
-	db    *pg.DB
-	dir   string
+	impg orig.Migrator
+	db   *pg.DB
+	dir  string
 }
 
 func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 	if dialect != "postgres" {
-		return nil, fmt.Errorf("unsupported dialect %s for STUMP driver", strings.ToUpper(dialect))
+		return nil, fmt.Errorf("unsupported dialect %s for impg driver", strings.ToUpper(dialect))
+	}
+
+	if dsn == "" {
+		// may be used for create command, who did not need db connection
+		return &Migrator{dir: dir}, nil
 	}
 
 	opts, err := pg.ParseURL(dsn)
@@ -30,7 +38,7 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 
 	db := pg.Connect(opts)
 
-	s, err := orig.New(orig.Options{
+	impg, err := orig.New(orig.Options{
 		DB:     db,
 		Logger: logger.G(),
 		Path:   dir,
@@ -43,9 +51,9 @@ func New(dialect, dsn, tableName, dir string) (*Migrator, error) {
 	orig.SetTableName(tableName)
 
 	return &Migrator{
-		stump: s,
-		db:    db,
-		dir:   dir,
+		impg: impg,
+		db:   db,
+		dir:  dir,
 	}, nil
 }
 
@@ -55,20 +63,30 @@ func (m Migrator) Create(name, ext string) error {
 }
 
 func (m Migrator) Close() error {
+	if m.db == nil {
+		return nil
+	}
 	return m.db.Close()
 }
 
 func (m Migrator) Down() error {
-	return m.stump.Down(1)
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+	return m.impg.Down(1)
 }
 
 func (m Migrator) DownTo(v string) error {
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+
 	version, err := versionToInt64(v)
 	if err != nil {
 		return err
 	}
 
-	current, err := m.stump.Version()
+	current, err := m.impg.Version()
 	if err != nil {
 		return err
 	}
@@ -78,19 +96,26 @@ func (m Migrator) DownTo(v string) error {
 		return fmt.Errorf("nothing to update, current: %d dest: %d", current, version)
 	}
 
-	return m.stump.Down(int(diff))
+	return m.impg.Down(int(diff))
 }
 
 func (m Migrator) Redo() error {
-	err := m.stump.Down(1)
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+
+	err := m.impg.Down(1)
 	if err != nil {
 		logger.G().Warnf("down cmd on redo failed: %s", err)
 	}
-	return m.stump.Up(1)
+	return m.impg.Up(1)
 }
 
 func (m Migrator) Reset() error {
-	return m.stump.Down(0)
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+	return m.impg.Down(0)
 }
 
 func (m Migrator) Status() error {
@@ -98,16 +123,22 @@ func (m Migrator) Status() error {
 }
 
 func (m Migrator) Up() error {
-	return m.stump.Up(0)
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+	return m.impg.Up(0)
 }
 
 func (m Migrator) UpTo(v string) error {
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
 	version, err := versionToInt64(v)
 	if err != nil {
 		return err
 	}
 
-	current, err := m.stump.Version()
+	current, err := m.impg.Version()
 	if err != nil {
 		return err
 	}
@@ -117,15 +148,18 @@ func (m Migrator) UpTo(v string) error {
 		return fmt.Errorf("nothing to update, current: %d dest: %d", current, version)
 	}
 
-	return m.stump.Up(int(diff))
+	return m.impg.Up(int(diff))
 }
 
 func (m Migrator) Version() error {
-	v, err := m.stump.Version()
+	if m.impg == nil {
+		return ErrMissingDBConfig
+	}
+	v, err := m.impg.Version()
 	if err != nil {
 		return err
 	}
-	n, err := m.stump.VersionName()
+	n, err := m.impg.VersionName()
 	if err != nil {
 		return err
 	}
