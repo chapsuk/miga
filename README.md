@@ -78,8 +78,8 @@ MIGA_CONFIG                 | miga.yml       | config file
 MIGA_DRIVER                 | goose          | one from [list](#supporting)
 MIGA_POSTGRES_DSN           |                | postgres DSN string
 MIGA_MYSQL_DSN              |                | mysql DSN string
-MIGA_MIGRATION_PATH         | ./migrations   | migrations dir
-MIGA_MIGRATION_TABLE_NAME   | db_version     | migrations db version table name
+MIGA_MIGRATE_PATH           | ./migrations   | migrations dir
+MIGA_MIGRATE_TABLE_NAME     | db_version     | migrations db version table name
 MIGA_SEED_PATH              | ./seeds        | seeds dir
 MIGA_SEED_TABLE_NAME        | seed_version   | seeds version table name
 MIGA_LOG_LEVEL              | info           | logging level
