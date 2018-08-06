@@ -6,7 +6,8 @@ postgres:
   password: password
   host: 127.0.0.1
   port: 5432
-  db: miga
+  database: miga
+  # db: miga # deprecated
   options: sslmode=disable
 
 # mysql:

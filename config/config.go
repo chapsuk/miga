@@ -86,13 +86,30 @@ func fillDBConfig(cfg *driver.Config) {
 	if viper.IsSet("postgres.dsn") || viper.IsSet("postgres.host") {
 		cfg.Dialect = "postgres"
 		dsn := viper.GetString("postgres.dsn")
-		if dsn == "" && viper.IsSet("postgres.host") {
-			dsn = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?%s",
+		if dsn == "" {
+			var addr string
+			if viper.IsSet("postgres.host") {
+				port := viper.GetInt("postgres.port")
+				if port == 0 {
+					port = 5432
+				}
+				addr = fmt.Sprintf("%s:%d", viper.GetString("postgres.host"), port)
+			}
+
+			if viper.GetString("postgres.address") != "" {
+				addr = viper.GetString("postgres.address")
+			}
+
+			db := viper.GetString("postgres.db")
+			if viper.IsSet("postgres.database") {
+				db = viper.GetString("postgres.database")
+			}
+
+			dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?%s",
 				viper.GetString("postgres.user"),
 				viper.GetString("postgres.password"),
-				viper.GetString("postgres.host"),
-				viper.GetInt("postgres.port"),
-				viper.GetString("postgres.db"),
+				addr,
+				db,
 				viper.GetString("postgres.options"),
 			)
 		}

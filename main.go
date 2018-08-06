@@ -16,7 +16,7 @@ import (
 
 var (
 	Name    = "miga"
-	Version = "develop"
+	Version = "v0.5.0"
 )
 
 func main() {
