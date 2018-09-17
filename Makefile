@@ -1,5 +1,5 @@
 NAME = miga
-VERSION ?= develop
+VERSION ?= v0.6.0
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 IMAGE_NAME = chapsuk/$(NAME)
@@ -13,7 +13,7 @@ build:
 
 .PHONY: docker_build
 docker_build:
-	docker build -t $(IMAGE_NAME):$(VERSION) --build-arg VERSION=$(VERSION) .
+	docker build -t $(IMAGE_NAME):$(VERSION) .
 
 release: docker_build
 	docker tag $(IMAGE_NAME):$(VERSION) $(IMAGE_NAME):latest
