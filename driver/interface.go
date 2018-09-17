@@ -27,12 +27,12 @@ func Available(name string) bool {
 
 type (
 	Config struct {
-		Name string
-
+		Name             string
 		Dialect          string
 		Dsn              string
 		Dir              string
 		VersionTableName string
+		Enabled          bool
 	}
 
 	Interface interface {
