@@ -73,7 +73,7 @@ func (m Migrator) Down() error {
 	if m.impg == nil {
 		return ErrMissingDBConfig
 	}
-	return m.impg.Down(1)
+	return handleErr(m.impg.Down(1))
 }
 
 func (m Migrator) DownTo(v string) error {
@@ -96,7 +96,7 @@ func (m Migrator) DownTo(v string) error {
 		return fmt.Errorf("nothing to update, current: %d dest: %d", current, version)
 	}
 
-	return m.impg.Down(int(diff))
+	return handleErr(m.impg.Down(int(diff)))
 }
 
 func (m Migrator) Redo() error {
@@ -108,14 +108,14 @@ func (m Migrator) Redo() error {
 	if err != nil {
 		logger.G().Warnf("down cmd on redo failed: %s", err)
 	}
-	return m.impg.Up(1)
+	return handleErr(m.impg.Up(1))
 }
 
 func (m Migrator) Reset() error {
 	if m.impg == nil {
 		return ErrMissingDBConfig
 	}
-	return m.impg.Down(0)
+	return handleErr(m.impg.Down(0))
 }
 
 func (m Migrator) Status() error {
@@ -126,7 +126,7 @@ func (m Migrator) Up() error {
 	if m.impg == nil {
 		return ErrMissingDBConfig
 	}
-	return m.impg.Up(0)
+	return handleErr(m.impg.Up(0))
 }
 
 func (m Migrator) UpTo(v string) error {
@@ -148,7 +148,7 @@ func (m Migrator) UpTo(v string) error {
 		return fmt.Errorf("nothing to update, current: %d dest: %d", current, version)
 	}
 
-	return m.impg.Up(int(diff))
+	return handleErr(m.impg.Up(int(diff)))
 }
 
 func (m Migrator) Version() error {
@@ -174,4 +174,12 @@ func versionToInt64(version string) (int64, error) {
 		return 0, err
 	}
 	return v, nil
+}
+
+func handleErr(err error) error {
+	switch err {
+	case orig.ErrDirNotExists:
+		return errors.New("target dir not exists")
+	}
+	return err
 }
