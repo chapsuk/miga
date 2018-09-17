@@ -1,4 +1,4 @@
-FROM chapsuk/golang-baseimage:1.10.2
+FROM chapsuk/golang:1.11.0
 ADD . /go/src/github.com/chapsuk/miga
 WORKDIR /go/src/github.com/chapsuk/miga
 RUN make build
