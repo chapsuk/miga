@@ -4,6 +4,7 @@ import (
 	"github.com/chapsuk/miga/commands"
 	"github.com/chapsuk/miga/config"
 	"github.com/chapsuk/miga/driver"
+	"github.com/chapsuk/miga/logger"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v2"
 )
@@ -18,23 +19,35 @@ func Command() *cli.Command {
 				Name:  "up",
 				Usage: "Up db to latest migration version and to latest seed.",
 				Action: func(ctx *cli.Context) error {
-					migrator, err := driver.New(config.MigrateDriverConfig())
-					if err != nil {
-						return errors.Wrap(err, "failed create migrator instance")
-					}
-					err = commands.Up(ctx, migrator)
-					if err != nil {
-						return errors.Wrap(err, "failed up migrations")
+					mcfg := config.MigrateDriverConfig()
+
+					if mcfg.Enabled {
+						migrator, err := driver.New(mcfg)
+						if err != nil {
+							return errors.Wrap(err, "failed create migrator instance")
+						}
+						err = commands.Up(ctx, migrator)
+						if err != nil {
+							return errors.Wrap(err, "failed up migrations")
+						}
+					} else {
+						logger.G().Warn("Skip migrate up, migrate dir not exists")
 					}
 
-					seeder, err := driver.New(config.SeedDriverConfig())
-					if err != nil {
-						return errors.Wrap(err, "failed create seeder instance")
+					scfg := config.SeedDriverConfig()
+					if scfg.Enabled {
+						seeder, err := driver.New(scfg)
+						if err != nil {
+							return errors.Wrap(err, "failed create seeder instance")
+						}
+						err = commands.Up(ctx, seeder)
+						if err != nil {
+							return errors.Wrap(err, "failed up seeds")
+						}
+					} else {
+						logger.G().Warn("Skip seed up, seed dir not exists")
 					}
-					err = commands.Up(ctx, seeder)
-					if err != nil {
-						return errors.Wrap(err, "failed up seeds")
-					}
+
 					return nil
 				},
 			},

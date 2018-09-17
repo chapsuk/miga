@@ -1,6 +1,8 @@
 package seed
 
 import (
+	"errors"
+
 	"github.com/chapsuk/miga/commands"
 	"github.com/chapsuk/miga/config"
 	"github.com/chapsuk/miga/driver"
@@ -15,7 +17,12 @@ func Command() *cli.Command {
 		Name:  "seed",
 		Usage: "Seeding root command, see",
 		Before: func(ctx *cli.Context) (err error) {
-			seeder, err = driver.New(config.SeedDriverConfig())
+			scfg := config.SeedDriverConfig()
+			if !scfg.Enabled {
+				err = errors.New("seeds dir not exists or misconfigured")
+				return
+			}
+			seeder, err = driver.New(scfg)
 			return
 		},
 		Subcommands: cli.CommandsByName([]*cli.Command{

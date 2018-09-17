@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/chapsuk/miga/driver"
@@ -40,14 +41,14 @@ func Init(appName, cfg, driverName string) error {
 	migrateConfig = &driver.Config{
 		Name:             driverName,
 		VersionTableName: "miga_db_version",
-		Dir:              "./migrations",
+		Dir:              "/migrations",
 		Dialect:          "postgres",
 	}
 
 	seedConfig = &driver.Config{
 		Name:             driverName,
 		VersionTableName: "miga_seed_version",
-		Dir:              "./seeds",
+		Dir:              "/seeds",
 		Dialect:          "postgres",
 	}
 
@@ -64,6 +65,9 @@ func Init(appName, cfg, driverName string) error {
 	if viper.IsSet("seed.path") {
 		seedConfig.Dir = viper.GetString("seed.path")
 	}
+
+	migrateConfig.Enabled = dirExists(migrateConfig.Dir)
+	seedConfig.Enabled = dirExists(seedConfig.Dir)
 
 	return nil
 }
@@ -122,4 +126,16 @@ func fillDBConfig(cfg *driver.Config) {
 		cfg.Dsn = viper.GetString("mysql.dsn")
 		return
 	}
+}
+
+func dirExists(dir string) bool {
+	s, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		logger.G().Errorw("Failed check dir stats", "error", err)
+		return false
+	}
+	return s.IsDir()
 }

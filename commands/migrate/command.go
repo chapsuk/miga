@@ -1,6 +1,8 @@
 package migrate
 
 import (
+	"errors"
+
 	"github.com/chapsuk/miga/commands"
 	"github.com/chapsuk/miga/config"
 	"github.com/chapsuk/miga/driver"
@@ -15,7 +17,12 @@ func Command() *cli.Command {
 		Name:  "migrate",
 		Usage: "Migrations root command",
 		Before: func(ctx *cli.Context) (err error) {
-			migrator, err = driver.New(config.MigrateDriverConfig())
+			mcfg := config.MigrateDriverConfig()
+			if !mcfg.Enabled {
+				err = errors.New("migrate dir not exists or misconfigured")
+				return
+			}
+			migrator, err = driver.New(mcfg)
 			return
 		},
 		Subcommands: cli.CommandsByName([]*cli.Command{
