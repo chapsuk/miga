@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/chapsuk/miga/logger"
+	"miga/logger"
 )
 
 var (

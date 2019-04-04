@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/chapsuk/miga/logger"
+	"miga/logger"
 )
 
 func CreateMigrationsFiles(

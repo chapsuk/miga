@@ -1,10 +1,11 @@
 package all
 
 import (
-	"github.com/chapsuk/miga/commands"
-	"github.com/chapsuk/miga/config"
-	"github.com/chapsuk/miga/driver"
-	"github.com/chapsuk/miga/logger"
+	"miga/commands"
+	"miga/config"
+	"miga/driver"
+	"miga/logger"
+
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v2"
 )

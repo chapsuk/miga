@@ -6,9 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/chapsuk/miga/commands"
-	"github.com/chapsuk/miga/config"
-	"github.com/chapsuk/miga/driver"
+	"miga/commands"
+	"miga/config"
+	"miga/driver"
+
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/urfave/cli.v2"
 )

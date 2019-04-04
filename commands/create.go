@@ -3,7 +3,8 @@ package commands
 import (
 	"errors"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
+
 	"gopkg.in/urfave/cli.v2"
 )
 

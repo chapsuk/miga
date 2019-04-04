@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chapsuk/miga/logger"
-	"github.com/chapsuk/miga/utils"
+	"miga/logger"
+	"miga/utils"
+
 	"github.com/go-pg/pg"
 	orig "github.com/im-kulikov/migrate"
 )

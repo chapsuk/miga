@@ -3,9 +3,10 @@ package seed
 import (
 	"errors"
 
-	"github.com/chapsuk/miga/commands"
-	"github.com/chapsuk/miga/config"
-	"github.com/chapsuk/miga/driver"
+	"miga/commands"
+	"miga/config"
+	"miga/driver"
+
 	"gopkg.in/urfave/cli.v2"
 )
 

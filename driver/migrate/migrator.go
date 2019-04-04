@@ -6,17 +6,18 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/chapsuk/miga/logger"
-	"github.com/chapsuk/miga/utils"
-	orig "github.com/golang-migrate/migrate"
-	"github.com/golang-migrate/migrate/database"
-	"github.com/golang-migrate/migrate/database/mysql"
-	"github.com/golang-migrate/migrate/database/postgres"
-	"github.com/golang-migrate/migrate/source"
-	"github.com/golang-migrate/migrate/source/file"
+	"miga/logger"
+	"miga/utils"
+
+	orig "github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database"
+	"github.com/golang-migrate/migrate/v4/database/mysql"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source"
+	"github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/pkg/errors"
 
-	_ "github.com/golang-migrate/migrate/source/file"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var ErrMissingDBConfig = errors.New("missing db config for migrate driver")

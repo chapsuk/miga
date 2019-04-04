@@ -3,11 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/chapsuk/miga/commands/all"
-	"github.com/chapsuk/miga/commands/migrate"
-	"github.com/chapsuk/miga/commands/seed"
-	"github.com/chapsuk/miga/config"
-	"github.com/chapsuk/miga/logger"
+	"miga/commands/all"
+	"miga/commands/migrate"
+	"miga/commands/seed"
+	"miga/config"
+	"miga/logger"
+
 	"gopkg.in/urfave/cli.v2"
 
 	_ "github.com/go-sql-driver/mysql"

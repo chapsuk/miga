@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 

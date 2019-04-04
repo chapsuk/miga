@@ -1,7 +1,11 @@
 language: go
 
 go:
-  - 1.10.x
+  - 1.12.x
+
+env:
+  global: 
+    - GO111MODULE=on
 
 services:
   - mysql
@@ -18,4 +22,4 @@ install:
   - make build
 
 script:
-  - go test -v ./...
+  - make test

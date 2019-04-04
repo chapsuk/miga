@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/chapsuk/miga/converter"
-	"github.com/chapsuk/miga/driver"
+	"miga/converter"
+	"miga/driver"
+
 	"gopkg.in/urfave/cli.v2"
 )
 

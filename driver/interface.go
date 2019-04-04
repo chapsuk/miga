@@ -3,9 +3,9 @@ package driver
 import (
 	"errors"
 
-	"github.com/chapsuk/miga/driver/goose"
-	"github.com/chapsuk/miga/driver/impg"
-	"github.com/chapsuk/miga/driver/migrate"
+	"miga/driver/goose"
+	"miga/driver/impg"
+	"miga/driver/migrate"
 )
 
 const (

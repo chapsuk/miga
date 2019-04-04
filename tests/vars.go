@@ -3,7 +3,7 @@ package tests
 import (
 	"database/sql"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
 )
 
 type (

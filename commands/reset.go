@@ -5,8 +5,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/chapsuk/miga/driver"
-	"github.com/chapsuk/miga/logger"
+	"miga/driver"
+	"miga/logger"
+
 	"gopkg.in/urfave/cli.v2"
 )
 
