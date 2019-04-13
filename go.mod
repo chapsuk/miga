@@ -7,7 +7,7 @@ require (
 	github.com/go-pg/pg v8.0.3+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang-migrate/migrate/v4 v4.2.5
-	github.com/im-kulikov/migrate v0.0.0-20180523141457-d4c757bb8788
+	github.com/im-kulikov/migrate v0.1.0
 	github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a // indirect
 	github.com/lib/pq v1.0.0
 	github.com/onsi/ginkgo v1.8.0 // indirect
