@@ -1,5 +1,5 @@
 NAME = miga
-VERSION ?= v0.7.0
+VERSION ?= v0.7.1
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 IMAGE_NAME = chapsuk/$(NAME)
