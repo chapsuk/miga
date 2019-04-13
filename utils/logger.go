@@ -1,6 +1,6 @@
 package utils
 
-import "github.com/chapsuk/miga/logger"
+import "miga/logger"
 
 type StdLogger struct{}
 

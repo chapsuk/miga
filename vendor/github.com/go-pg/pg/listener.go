@@ -2,6 +2,8 @@ package pg
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,9 +12,12 @@ import (
 	"github.com/go-pg/pg/types"
 )
 
-var errListenerClosed = errors.New("pg: listener is closed")
+const gopgChannel = "gopg:ping"
 
-// A notification received with LISTEN command.
+var errListenerClosed = errors.New("pg: listener is closed")
+var errPingTimeout = errors.New("pg: ping timeout")
+
+// Notification which is received with LISTEN command.
 type Notification struct {
 	Channel string
 	Payload string
@@ -29,25 +34,41 @@ type Listener struct {
 	mu     sync.Mutex
 	cn     *pool.Conn
 	closed bool
+	exit   chan struct{}
+
+	chOnce sync.Once
+	ch     chan *Notification
+	pingCh chan struct{}
 }
 
-func (ln *Listener) conn(readTimeout time.Duration) (*pool.Conn, error) {
+func (ln *Listener) String() string {
+	return fmt.Sprintf("Listener(%s)", strings.Join(ln.channels, ", "))
+}
+
+func (ln *Listener) init() {
+	ln.exit = make(chan struct{})
+}
+
+func (ln *Listener) conn() (*pool.Conn, error) {
 	ln.mu.Lock()
-	cn, err := ln._conn(readTimeout)
+	cn, err := ln._conn()
 	ln.mu.Unlock()
-	if err != nil {
-		if err == pool.ErrClosed {
-			_ = ln.Close()
-			return nil, errListenerClosed
-		}
+
+	switch err {
+	case nil:
+		return cn, nil
+	case errListenerClosed:
+		return nil, err
+	case pool.ErrClosed:
+		_ = ln.Close()
+		return nil, errListenerClosed
+	default:
+		internal.Logf("pg: Listen failed: %s", err)
 		return nil, err
 	}
-
-	cn.SetTimeout(readTimeout, ln.db.opt.WriteTimeout)
-	return cn, nil
 }
 
-func (ln *Listener) _conn(readTimeout time.Duration) (*pool.Conn, error) {
+func (ln *Listener) _conn() (*pool.Conn, error) {
 	if ln.closed {
 		return nil, errListenerClosed
 	}
@@ -61,16 +82,15 @@ func (ln *Listener) _conn(readTimeout time.Duration) (*pool.Conn, error) {
 		return nil, err
 	}
 
-	if cn.InitedAt.IsZero() {
-		if err := ln.db.initConn(cn); err != nil {
-			_ = ln.db.pool.CloseConn(cn)
-			return nil, err
-		}
-		cn.InitedAt = time.Now()
+	err = ln.db.initConn(cn)
+	if err != nil {
+		_ = ln.db.pool.CloseConn(cn)
+		return nil, err
 	}
 
 	if len(ln.channels) > 0 {
-		if err := ln.listen(cn, ln.channels...); err != nil {
+		err := ln.listen(cn, ln.channels...)
+		if err != nil {
 			_ = ln.db.pool.CloseConn(cn)
 			return nil, err
 		}
@@ -80,19 +100,20 @@ func (ln *Listener) _conn(readTimeout time.Duration) (*pool.Conn, error) {
 	return cn, nil
 }
 
-func (ln *Listener) freeConn(cn *pool.Conn, err error) {
-	if !isBadConn(err, true) {
-		return
-	}
-
+func (ln *Listener) releaseConn(cn *pool.Conn, err error, allowTimeout bool) {
 	ln.mu.Lock()
-	if cn == ln.cn {
-		_ = ln.closeConn(err)
+	if ln.cn == cn {
+		if isBadConn(err, allowTimeout) {
+			ln._reconnect(err)
+		}
 	}
 	ln.mu.Unlock()
 }
 
-func (ln *Listener) closeConn(reason error) error {
+func (ln *Listener) _closeTheCn(reason error) error {
+	if ln.cn == nil {
+		return nil
+	}
 	if !ln.closed {
 		internal.Logf("pg: discarding bad listener connection: %s", reason)
 	}
@@ -100,6 +121,11 @@ func (ln *Listener) closeConn(reason error) error {
 	err := ln.db.pool.CloseConn(ln.cn)
 	ln.cn = nil
 	return err
+}
+
+func (ln *Listener) _reconnect(reason error) {
+	_ = ln._closeTheCn(reason)
+	_, _ = ln._conn()
 }
 
 // Close closes the listener, releasing any open resources.
@@ -111,43 +137,21 @@ func (ln *Listener) Close() error {
 		return errListenerClosed
 	}
 	ln.closed = true
-	if ln.cn != nil {
-		return ln.closeConn(errListenerClosed)
-	}
-	return nil
-}
+	close(ln.exit)
 
-// Channel returns a channel for concurrently receiving notifications.
-// The channel is closed with Listener.
-func (ln *Listener) Channel() <-chan *Notification {
-	ch := make(chan *Notification, 100)
-	go func() {
-		for {
-			channel, payload, err := ln.ReceiveTimeout(5 * time.Second)
-			if err != nil {
-				if err == errListenerClosed {
-					break
-				}
-				continue
-			}
-			ch <- &Notification{channel, payload}
-		}
-		close(ch)
-	}()
-	return ch
+	return ln._closeTheCn(errListenerClosed)
 }
 
 // Listen starts listening for notifications on channels.
 func (ln *Listener) Listen(channels ...string) error {
-	cn, err := ln.conn(ln.db.opt.ReadTimeout)
+	cn, err := ln.conn()
 	if err != nil {
 		return err
 	}
 
-	if err := ln.listen(cn, channels...); err != nil {
-		if err != nil {
-			ln.freeConn(cn, err)
-		}
+	err = ln.listen(cn, channels...)
+	if err != nil {
+		ln.releaseConn(cn, err, false)
 		return err
 	}
 
@@ -156,34 +160,159 @@ func (ln *Listener) Listen(channels ...string) error {
 }
 
 func (ln *Listener) listen(cn *pool.Conn, channels ...string) error {
-	for _, channel := range channels {
-		err := writeQueryMsg(cn.Writer, ln.db, "LISTEN ?", pgChan(channel))
-		if err != nil {
-			return err
+	err := cn.WithWriter(ln.db.opt.WriteTimeout, func(wb *pool.WriteBuffer) error {
+		for _, channel := range channels {
+			err := writeQueryMsg(wb, ln.db, "LISTEN ?", pgChan(channel))
+			if err != nil {
+				return err
+			}
 		}
-	}
-	return cn.FlushWriter()
+		return nil
+	})
+	return err
 }
 
-// Receive indefinitely waits for a notification.
+// Receive indefinitely waits for a notification. This is low-level API
+// and in most cases Channel should be used instead.
 func (ln *Listener) Receive() (channel string, payload string, err error) {
 	return ln.ReceiveTimeout(0)
 }
 
 // ReceiveTimeout waits for a notification until timeout is reached.
+// This is low-level API and in most cases Channel should be used instead.
 func (ln *Listener) ReceiveTimeout(timeout time.Duration) (channel, payload string, err error) {
-	cn, err := ln.conn(timeout)
+	cn, err := ln.conn()
 	if err != nil {
 		return "", "", err
 	}
 
-	channel, payload, err = readNotification(cn)
+	err = cn.WithReader(timeout, func(rd *internal.BufReader) error {
+		channel, payload, err = readNotification(rd)
+		return err
+	})
 	if err != nil {
-		ln.freeConn(cn, err)
+		ln.releaseConn(cn, err, timeout > 0)
 		return "", "", err
 	}
 
 	return channel, payload, nil
+}
+
+// Channel returns a channel for concurrently receiving notifications.
+// It periodically sends Ping notification to test connection health.
+//
+// The channel is closed with Listener. Receive* APIs can not be used
+// after channel is created.
+func (ln *Listener) Channel() <-chan *Notification {
+	return ln.channel(100)
+}
+
+// ChannelSize is like Channel, but creates a Go channel
+// with specified buffer size.
+func (ln *Listener) ChannelSize(size int) <-chan *Notification {
+	return ln.channel(size)
+}
+
+func (ln *Listener) channel(size int) <-chan *Notification {
+	ln.chOnce.Do(func() {
+		ln.initChannel(size)
+	})
+	if cap(ln.ch) != size {
+		err := fmt.Errorf("redis: Listener.Channel is called with different buffer size")
+		panic(err)
+	}
+	return ln.ch
+}
+
+func (ln *Listener) initChannel(size int) {
+	const timeout = 30 * time.Second
+
+	_ = ln.Listen(gopgChannel)
+
+	ln.ch = make(chan *Notification, size)
+	ln.pingCh = make(chan struct{}, 1)
+
+	go func() {
+		timer := time.NewTimer(timeout)
+		timer.Stop()
+
+		var errCount int
+		for {
+			channel, payload, err := ln.Receive()
+			if err != nil {
+				if err == errListenerClosed {
+					close(ln.ch)
+					return
+				}
+				if errCount > 0 {
+					time.Sleep(ln.db.retryBackoff(errCount))
+				}
+				errCount++
+				continue
+			}
+
+			errCount = 0
+
+			// Any notification is as good as a ping.
+			select {
+			case ln.pingCh <- struct{}{}:
+			default:
+			}
+
+			switch channel {
+			case gopgChannel:
+				// ignore
+			default:
+				timer.Reset(timeout)
+				select {
+				case ln.ch <- &Notification{channel, payload}:
+					if !timer.Stop() {
+						<-timer.C
+					}
+				case <-timer.C:
+					internal.Logf(
+						"pg: %s channel is full for %s (notification is dropped)",
+						ln, timeout)
+				}
+			}
+		}
+	}()
+
+	go func() {
+		timer := time.NewTimer(timeout)
+		timer.Stop()
+
+		healthy := true
+		for {
+			timer.Reset(timeout)
+			select {
+			case <-ln.pingCh:
+				healthy = true
+				if !timer.Stop() {
+					<-timer.C
+				}
+			case <-timer.C:
+				pingErr := ln.ping()
+				if healthy {
+					healthy = false
+				} else {
+					if pingErr == nil {
+						pingErr = errPingTimeout
+					}
+					ln.mu.Lock()
+					ln._reconnect(pingErr)
+					ln.mu.Unlock()
+				}
+			case <-ln.exit:
+				return
+			}
+		}
+	}()
+}
+
+func (ln *Listener) ping() error {
+	_, err := ln.db.Exec("NOTIFY ?", pgChan(gopgChannel))
+	return err
 }
 
 func appendIfNotExists(ss []string, es ...string) []string {

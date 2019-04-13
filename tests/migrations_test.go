@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -123,6 +124,43 @@ var migrationCases = []testCase{
 			}
 			So(r.Err(), ShouldBeNil)
 			So(count, ShouldEqual, 0)
+		},
+		Condition: func(driverName, dialect string) bool {
+			return dialect == "postgres"
+		},
+	},
+	{
+		Description: "#7 (goose_issue158): create custom type",
+		Action: func(d driver.Interface) {
+			err := d.UpTo("6")
+			So(err, ShouldBeNil)
+		},
+		Assert: func(db *sql.DB) {
+			r, err := db.Query("SELECT 1 FROM pg_type WHERE typname = 'things'")
+			So(err, ShouldBeNil)
+			count := 1
+			for r.Next() {
+				r.Scan(&count)
+			}
+			So(r.Err(), ShouldBeNil)
+			So(count, ShouldEqual, 1)
+
+			_, err = db.Exec("INSERT INTO doge (id, th) VALUES (1, 'hello')")
+			So(r.Err(), ShouldBeNil)
+
+			r, err = db.Query("SELECT id, th FROM doge")
+			So(err, ShouldBeNil)
+			for r.Next() {
+				var (
+					id int
+					th string
+				)
+				err = r.Scan(&id, &th)
+				So(err, ShouldBeNil)
+				So(id, ShouldEqual, 1)
+				So(th, ShouldEqual, "hello")
+			}
+			So(r.Err(), ShouldBeNil)
 		},
 		Condition: func(driverName, dialect string) bool {
 			return dialect == "postgres"

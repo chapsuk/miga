@@ -3,7 +3,8 @@ package goose
 import (
 	"database/sql"
 
-	"github.com/chapsuk/miga/utils"
+	"miga/utils"
+
 	orig "github.com/pressly/goose"
 )
 

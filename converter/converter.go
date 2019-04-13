@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
 )
 
 type Formatter interface {

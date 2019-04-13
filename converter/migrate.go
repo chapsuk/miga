@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/chapsuk/miga/logger"
-	"github.com/chapsuk/miga/utils"
+	"miga/logger"
+	"miga/utils"
 )
 
 type MigrateFormatter struct{}

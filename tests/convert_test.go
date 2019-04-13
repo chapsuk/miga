@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chapsuk/miga/converter"
-	"github.com/chapsuk/miga/driver"
+	"miga/converter"
+	"miga/driver"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 

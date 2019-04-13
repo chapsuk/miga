@@ -1,21 +1,24 @@
 package orm
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-pg/pg/internal"
+	"github.com/go-pg/pg/internal/iszero"
+	"github.com/go-pg/pg/internal/tag"
 	"github.com/go-pg/pg/types"
 )
 
 const (
 	AfterQueryHookFlag = uint16(1) << iota
+	BeforeSelectQueryHookFlag
 	AfterSelectHookFlag
 	BeforeInsertHookFlag
 	AfterInsertHookFlag
@@ -27,6 +30,7 @@ const (
 )
 
 var timeType = reflect.TypeOf((*time.Time)(nil)).Elem()
+var nullTimeType = reflect.TypeOf((*types.NullTime)(nil)).Elem()
 var ipType = reflect.TypeOf((*net.IP)(nil)).Elem()
 var ipNetType = reflect.TypeOf((*net.IPNet)(nil)).Elem()
 var scannerType = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
@@ -34,6 +38,7 @@ var nullBoolType = reflect.TypeOf((*sql.NullBool)(nil)).Elem()
 var nullFloatType = reflect.TypeOf((*sql.NullFloat64)(nil)).Elem()
 var nullIntType = reflect.TypeOf((*sql.NullInt64)(nil)).Elem()
 var nullStringType = reflect.TypeOf((*sql.NullString)(nil)).Elem()
+var jsonRawMessageType = reflect.TypeOf((*json.RawMessage)(nil)).Elem()
 
 // Table represents a SQL table created from Go struct.
 type Table struct {
@@ -41,18 +46,29 @@ type Table struct {
 	zeroStruct reflect.Value
 
 	TypeName  string
-	Name      types.Q
 	Alias     types.Q
 	ModelName string
 
-	Fields     []*Field // PKs + DataFields
-	PKs        []*Field
-	DataFields []*Field
-	FieldsMap  map[string]*Field
+	Name               string
+	FullName           types.Q
+	FullNameForSelects types.Q
+
+	Tablespace types.Q
+
+	allFields     []*Field // read only
+	skippedFields []*Field
+
+	Fields      []*Field // PKs + DataFields
+	PKs         []*Field
+	DataFields  []*Field
+	fieldsMapMu sync.RWMutex
+	FieldsMap   map[string]*Field
 
 	Methods   map[string]*Method
 	Relations map[string]*Relation
 	Unique    map[string][]*Field
+
+	SoftDeleteField *Field
 
 	flags uint16
 }
@@ -60,15 +76,19 @@ type Table struct {
 func newTable(typ reflect.Type) *Table {
 	t := new(Table)
 	t.Type = typ
-	t.zeroStruct = reflect.Zero(t.Type)
+	t.zeroStruct = reflect.New(t.Type).Elem()
 	t.TypeName = internal.ToExported(t.Type.Name())
 	t.ModelName = internal.Underscore(t.Type.Name())
-	t.Name = types.Q(types.AppendField(nil, tableNameInflector(t.ModelName), 1))
+	t.Name = tableNameInflector(t.ModelName)
+	t.setName(types.Q(types.AppendField(nil, t.Name, 1)))
 	t.Alias = types.Q(types.AppendField(nil, t.ModelName, 1))
 
 	typ = reflect.PtrTo(t.Type)
 	if typ.Implements(afterQueryHookType) {
 		t.SetFlag(AfterQueryHookFlag)
+	}
+	if typ.Implements(beforeSelectQueryHookType) {
+		t.SetFlag(BeforeSelectQueryHookFlag)
 	}
 	if typ.Implements(afterSelectHookType) {
 		t.SetFlag(AfterSelectHookFlag)
@@ -92,14 +112,54 @@ func newTable(typ reflect.Type) *Table {
 		t.SetFlag(AfterDeleteHookFlag)
 	}
 
-	t.initFields()
-	t.initMethods()
+	if typ.Implements(oldAfterQueryHookType) {
+		panic(fmt.Sprintf("%s.AfterQuery must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldBeforeSelectQueryHookType) {
+		panic(fmt.Sprintf("%s.BeforeSelectQuery must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldAfterSelectHookType) {
+		panic(fmt.Sprintf("%s.AfterSelect must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldBeforeInsertHookType) {
+		panic(fmt.Sprintf("%s.BeforeInsert must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldAfterInsertHookType) {
+		panic(fmt.Sprintf("%s.AfterInsert must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldBeforeUpdateHookType) {
+		panic(fmt.Sprintf("%s.BeforeUpdate must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldAfterUpdateHookType) {
+		panic(fmt.Sprintf("%s.AfterUpdate must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldBeforeDeleteHookType) {
+		panic(fmt.Sprintf("%s.BeforeDelete must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
+	if typ.Implements(oldAfterDeleteHookType) {
+		panic(fmt.Sprintf("%s.AfterDelete must be updated - https://github.com/go-pg/pg/wiki/Model-Hooks", t.TypeName))
+	}
 
 	return t
 }
 
-func (t *Table) init() {
+func (t *Table) init1() {
+	t.initFields()
+	t.initMethods()
+}
+
+func (t *Table) init2() {
+	t.initInlines()
 	t.initRelations()
+	t.skippedFields = nil
+}
+
+func (t *Table) setName(name types.Q) {
+	t.FullName = name
+	t.FullNameForSelects = name
+	if t.Alias == "" {
+		t.Alias = name
+	}
 }
 
 func (t *Table) String() string {
@@ -117,14 +177,16 @@ func (t *Table) HasFlag(flag uint16) bool {
 	return t.flags&flag != 0
 }
 
-func (t *Table) HasField(field string) bool {
-	_, err := t.GetField(field)
-	return err == nil
-}
-
 func (t *Table) checkPKs() error {
 	if len(t.PKs) == 0 {
-		return fmt.Errorf("%s does not have primary keys", t)
+		return fmt.Errorf("pg: %s does not have primary keys", t)
+	}
+	return nil
+}
+
+func (t *Table) mustSoftDelete() error {
+	if t.SoftDeleteField == nil {
+		return fmt.Errorf("pg: %s does not support soft deletes", t)
 	}
 	return nil
 }
@@ -158,10 +220,22 @@ func removeField(fields []*Field, field *Field) []*Field {
 	return fields
 }
 
-func (t *Table) GetField(fieldName string) (*Field, error) {
-	field, ok := t.FieldsMap[fieldName]
+func (t *Table) getField(name string) *Field {
+	t.fieldsMapMu.RLock()
+	field := t.FieldsMap[name]
+	t.fieldsMapMu.RUnlock()
+	return field
+}
+
+func (t *Table) HasField(name string) bool {
+	_, ok := t.FieldsMap[name]
+	return ok
+}
+
+func (t *Table) GetField(name string) (*Field, error) {
+	field, ok := t.FieldsMap[name]
 	if !ok {
-		return nil, fmt.Errorf("can't find column=%s in %s", fieldName, t)
+		return nil, fmt.Errorf("pg: can't find column=%s in %s", name, t)
 	}
 	return field, nil
 }
@@ -205,11 +279,14 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 			fieldType := indirectType(f.Type)
 			t.addFields(fieldType, append(index, f.Index...))
 
-			pgTag := parseTag(f.Tag.Get("pg"))
-			if _, ok := pgTag.Options["override"]; ok {
-				embeddedTable := newTable(fieldType)
+			pgTag := tag.Parse(f.Tag.Get("pg"))
+			_, inherit := pgTag.Options["inherit"]
+			_, override := pgTag.Options["override"]
+			if inherit || override {
+				embeddedTable := _tables.get(fieldType, true)
 				t.TypeName = embeddedTable.TypeName
-				t.Name = embeddedTable.Name
+				t.FullName = embeddedTable.FullName
+				t.FullNameForSelects = embeddedTable.FullNameForSelects
 				t.Alias = embeddedTable.Alias
 				t.ModelName = embeddedTable.ModelName
 			}
@@ -225,7 +302,7 @@ func (t *Table) addFields(typ reflect.Type, baseIndex []int) {
 }
 
 func (t *Table) newField(f reflect.StructField, index []int) *Field {
-	sqlTag := parseTag(f.Tag.Get("sql"))
+	sqlTag := tag.Parse(f.Tag.Get("sql"))
 
 	switch f.Name {
 	case "tableName", "TableName":
@@ -233,19 +310,30 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 			return nil
 		}
 
-		if sqlTag.Name != "" {
-			if isPostgresKeyword(sqlTag.Name) {
-				sqlTag.Name = `"` + sqlTag.Name + `"`
-			}
-			s, _ := unquote(sqlTag.Name)
-			t.Name = types.Q(s)
+		tableSpace, ok := sqlTag.Options["tablespace"]
+		if ok {
+			s, _ := tag.Unquote(tableSpace)
+			t.Tablespace = types.Q(internal.QuoteTableName(s))
 		}
 
-		if alias, ok := sqlTag.Options["alias"]; ok {
-			t.Alias = types.Q(alias)
+		if sqlTag.Name == "_" {
+			t.setName("")
+		} else if sqlTag.Name != "" {
+			s, _ := tag.Unquote(sqlTag.Name)
+			t.setName(types.Q(internal.QuoteTableName(s)))
 		}
 
-		pgTag := parseTag(f.Tag.Get("pg"))
+		if v, ok := sqlTag.Options["select"]; ok {
+			v, _ = tag.Unquote(v)
+			t.FullNameForSelects = types.Q(internal.QuoteTableName(v))
+		}
+
+		if v, ok := sqlTag.Options["alias"]; ok {
+			v, _ = tag.Unquote(v)
+			t.Alias = types.Q(internal.QuoteTableName(v))
+		}
+
+		pgTag := tag.Parse(f.Tag.Get("pg"))
 		if _, ok := pgTag.Options["discard_unknown_columns"]; ok {
 			t.SetFlag(discardUnknownColumns)
 		}
@@ -263,7 +351,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 	}
 
 	index = append(index, f.Index...)
-	if field, ok := t.FieldsMap[sqlTag.Name]; ok {
+	if field := t.getField(sqlTag.Name); field != nil {
 		if indexEqual(field.Index, index) {
 			return field
 		}
@@ -295,7 +383,7 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		}
 	}
 	if v, ok := sqlTag.Options["default"]; ok {
-		v, ok = unquote(v)
+		v, ok = tag.Unquote(v)
 		if ok {
 			field.Default = types.Q(types.AppendString(nil, v, 1))
 		} else {
@@ -310,16 +398,18 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		field.SetFlag(ForeignKeyFlag)
 	} else if strings.HasPrefix(field.SQLName, "fk_") {
 		field.SetFlag(ForeignKeyFlag)
-	} else if len(t.PKs) == 0 {
-		if field.SQLName == "id" ||
-			field.SQLName == "uuid" ||
-			field.SQLName == "pk_"+t.ModelName {
+	} else if len(t.PKs) == 0 && !sqlTag.HasOption("nopk") {
+		switch field.SQLName {
+		case "id", "uuid", "pk_" + t.ModelName:
 			field.SetFlag(PrimaryKeyFlag)
 		}
 	}
 
-	pgTag := parseTag(f.Tag.Get("pg"))
-	if _, ok := pgTag.Options["array"]; ok {
+	pgTag := tag.Parse(f.Tag.Get("pg"))
+
+	if _, ok := sqlTag.Options["array"]; ok {
+		field.SetFlag(ArrayFlag)
+	} else if _, ok := pgTag.Options["array"]; ok {
 		field.SetFlag(ArrayFlag)
 	}
 
@@ -332,12 +422,22 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		field.OnDelete = v
 	}
 
-	if _, ok := pgTag.Options["json_use_number"]; ok {
+	if v, ok := sqlTag.Options["on_update"]; ok {
+		field.OnUpdate = v
+	}
+
+	if _, ok := sqlTag.Options["composite"]; ok {
+		field.append = compositeAppender(f.Type)
+		field.scan = compositeScanner(f.Type)
+	} else if _, ok := pgTag.Options["json_use_number"]; ok {
 		field.append = types.Appender(f.Type)
 		field.scan = scanJSONValue
 	} else if field.HasFlag(ArrayFlag) {
 		field.append = types.ArrayAppender(f.Type)
 		field.scan = types.ArrayScanner(f.Type)
+	} else if _, ok := sqlTag.Options["hstore"]; ok {
+		field.append = types.HstoreAppender(f.Type)
+		field.scan = types.HstoreScanner(f.Type)
 	} else if _, ok := pgTag.Options["hstore"]; ok {
 		field.append = types.HstoreAppender(f.Type)
 		field.scan = types.HstoreScanner(f.Type)
@@ -345,12 +445,31 @@ func (t *Table) newField(f reflect.StructField, index []int) *Field {
 		field.append = types.Appender(f.Type)
 		field.scan = types.Scanner(f.Type)
 	}
-	field.isZero = isZeroFunc(f.Type)
+	field.isZero = iszero.Checker(f.Type)
 
+	if v, ok := sqlTag.Options["alias"]; ok {
+		v, _ = tag.Unquote(v)
+		t.FieldsMap[v] = field
+	}
+
+	t.allFields = append(t.allFields, field)
 	if skip {
+		t.skippedFields = append(t.skippedFields, field)
 		t.FieldsMap[field.SQLName] = field
 		return nil
 	}
+
+	if _, ok := pgTag.Options["soft_delete"]; ok {
+		switch field.Type {
+		case timeType, nullTimeType:
+			t.SoftDeleteField = field
+		default:
+			err := fmt.Errorf(
+				"soft_delete is only supported for time.Time and pg.NullTime")
+			panic(err)
+		}
+	}
+
 	return field
 }
 
@@ -378,11 +497,22 @@ func (t *Table) initMethods() {
 	}
 }
 
+func (t *Table) initInlines() {
+	for _, f := range t.skippedFields {
+		if f.Type.Kind() == reflect.Struct {
+			t.inlineFields(f, nil)
+		}
+	}
+}
+
 func (t *Table) initRelations() {
-	for _, field := range t.FieldsMap {
-		if t.tryRelation(field) {
-			t.DataFields = removeField(t.DataFields, field)
-			t.Fields = removeField(t.Fields, field)
+	for i := 0; i < len(t.Fields); {
+		f := t.Fields[i]
+		if t.tryRelation(f) {
+			t.Fields = removeField(t.Fields, f)
+			t.DataFields = removeField(t.DataFields, f)
+		} else {
+			i++
 		}
 	}
 }
@@ -407,7 +537,7 @@ func (t *Table) tryRelationSlice(field *Field) bool {
 		return false
 	}
 
-	pgTag := parseTag(field.Field.Tag.Get("pg"))
+	pgTag := tag.Parse(field.Field.Tag.Get("pg"))
 	joinTable := _tables.get(elemType, true)
 
 	fk, fkOK := pgTag.Options["fk"]
@@ -523,6 +653,10 @@ func (t *Table) tryRelationSlice(field *Field) bool {
 		fkValues = t.PKs
 	}
 
+	if len(fks) != len(fkValues) {
+		panic("len(fks) != len(fkValues)")
+	}
+
 	if len(fks) > 0 {
 		t.addRelation(&Relation{
 			Type:        HasManyRelation,
@@ -539,58 +673,92 @@ func (t *Table) tryRelationSlice(field *Field) bool {
 }
 
 func (t *Table) tryRelationStruct(field *Field) bool {
-	pgTag := parseTag(field.Field.Tag.Get("pg"))
+	pgTag := tag.Parse(field.Field.Tag.Get("pg"))
 	joinTable := _tables.get(field.Type, true)
-	if len(joinTable.Fields) == 0 {
+	if len(joinTable.allFields) == 0 {
 		return false
 	}
 
 	res := t.tryHasOne(joinTable, field, pgTag) ||
 		t.tryBelongsToOne(joinTable, field, pgTag)
-
-	for _, f := range joinTable.FieldsMap {
-		f = f.Copy()
-		f.GoName = field.GoName + "_" + f.GoName
-		f.SQLName = field.SQLName + "__" + f.SQLName
-		f.Column = types.Q(types.AppendField(nil, f.SQLName, 1))
-		f.Index = appendNew(field.Index, f.Index...)
-		if _, ok := t.FieldsMap[f.SQLName]; !ok {
-			t.FieldsMap[f.SQLName] = f
-		}
-	}
-
+	t.inlineFields(field, nil)
 	return res
 }
 
-func isPostgresKeyword(s string) bool {
-	switch strings.ToLower(s) {
-	case "user", "group", "constraint", "limit",
-		"member", "placing", "references", "table":
-		return true
-	default:
-		return false
+func (t *Table) inlineFields(strct *Field, path map[reflect.Type]struct{}) {
+	if path == nil {
+		path = map[reflect.Type]struct{}{
+			t.Type: struct{}{},
+		}
 	}
+
+	if _, ok := path[strct.Type]; ok {
+		return
+	}
+	path[strct.Type] = struct{}{}
+
+	joinTable := _tables.get(strct.Type, true)
+	for _, f := range joinTable.allFields {
+		f = f.Copy()
+		f.GoName = strct.GoName + "_" + f.GoName
+		f.SQLName = strct.SQLName + "__" + f.SQLName
+		f.Column = types.Q(types.AppendField(nil, f.SQLName, 1))
+		f.Index = appendNew(strct.Index, f.Index...)
+
+		t.fieldsMapMu.Lock()
+		if _, ok := t.FieldsMap[f.SQLName]; !ok {
+			t.FieldsMap[f.SQLName] = f
+		}
+		t.fieldsMapMu.Unlock()
+
+		if f.Type.Kind() != reflect.Struct {
+			continue
+		}
+
+		if _, ok := path[f.Type]; !ok {
+			t.inlineFields(f, path)
+		}
+	}
+}
+
+func appendNew(dst []int, src ...int) []int {
+	cp := make([]int, len(dst)+len(src))
+	copy(cp, dst)
+	copy(cp[len(dst):], src)
+	return cp
 }
 
 func isColumn(typ reflect.Type) bool {
 	return typ.Implements(scannerType) || reflect.PtrTo(typ).Implements(scannerType)
 }
 
-func fieldSQLType(field *Field, pgTag, sqlTag *tag) string {
+func fieldSQLType(field *Field, pgTag, sqlTag *tag.Tag) string {
 	if typ, ok := sqlTag.Options["type"]; ok {
 		field.SetFlag(customTypeFlag)
-		typ, _ = unquote(typ)
+		typ, _ = tag.Unquote(typ)
 		return typ
 	}
 
-	if _, ok := pgTag.Options["hstore"]; ok {
+	if typ, ok := sqlTag.Options["composite"]; ok {
+		field.SetFlag(customTypeFlag)
+		typ, _ = tag.Unquote(typ)
+		return typ
+	}
+
+	if _, ok := sqlTag.Options["hstore"]; ok {
+		field.SetFlag(customTypeFlag)
+		return "hstore"
+	} else if _, ok := pgTag.Options["hstore"]; ok {
 		field.SetFlag(customTypeFlag)
 		return "hstore"
 	}
 
 	if field.HasFlag(ArrayFlag) {
-		sqlType := sqlType(field.Type.Elem())
-		return sqlType + "[]"
+		switch field.Type.Kind() {
+		case reflect.Slice, reflect.Array:
+			sqlType := sqlType(field.Type.Elem())
+			return sqlType + "[]"
+		}
 	}
 
 	sqlType := sqlType(field.Type)
@@ -622,6 +790,8 @@ func sqlType(typ reflect.Type) string {
 		return "bigint"
 	case nullStringType:
 		return "text"
+	case jsonRawMessageType:
+		return "jsonb"
 	}
 
 	switch typ.Kind() {
@@ -673,8 +843,8 @@ func sqlTypeEqual(a, b string) bool {
 	return pkSQLType(a) == pkSQLType(b)
 }
 
-func (t *Table) tryHasOne(joinTable *Table, field *Field, tag *tag) bool {
-	fk, fkOK := tag.Options["fk"]
+func (t *Table) tryHasOne(joinTable *Table, field *Field, pgTag *tag.Tag) bool {
+	fk, fkOK := pgTag.Options["fk"]
 	if fkOK {
 		if fk == "-" {
 			return false
@@ -697,8 +867,8 @@ func (t *Table) tryHasOne(joinTable *Table, field *Field, tag *tag) bool {
 	return false
 }
 
-func (t *Table) tryBelongsToOne(joinTable *Table, field *Field, tag *tag) bool {
-	fk, fkOK := tag.Options["fk"]
+func (t *Table) tryBelongsToOne(joinTable *Table, field *Field, pgTag *tag.Tag) bool {
+	fk, fkOK := pgTag.Options["fk"]
 	if fkOK {
 		if fk == "-" {
 			return false
@@ -740,12 +910,24 @@ func foreignKeys(base, join *Table, fk string, tryFK bool) []*Field {
 		f := join.getField(fkName)
 		if f != nil && sqlTypeEqual(pk.SQLType, f.SQLType) {
 			fks = append(fks, f)
+			continue
+		}
+
+		if strings.IndexByte(pk.SQLName, '_') == -1 {
+			continue
+		}
+
+		f = join.getField(pk.SQLName)
+		if f != nil && sqlTypeEqual(pk.SQLType, f.SQLType) {
+			fks = append(fks, f)
+			continue
 		}
 	}
-	if len(fks) > 0 {
+	if len(fks) > 0 && len(fks) == len(base.PKs) {
 		return fks
 	}
 
+	fks = nil
 	for _, pk := range base.PKs {
 		if !strings.HasPrefix(pk.SQLName, "pk_") {
 			continue
@@ -756,7 +938,7 @@ func foreignKeys(base, join *Table, fk string, tryFK bool) []*Field {
 			fks = append(fks, f)
 		}
 	}
-	if len(fks) > 0 {
+	if len(fks) > 0 && len(fks) == len(base.PKs) {
 		return fks
 	}
 
@@ -767,35 +949,31 @@ func foreignKeys(base, join *Table, fk string, tryFK bool) []*Field {
 	if tryFK {
 		f := join.getField(fk)
 		if f != nil && sqlTypeEqual(base.PKs[0].SQLType, f.SQLType) {
-			fks = append(fks, f)
-			return fks
+			return []*Field{f}
 		}
 	}
 
 	for _, suffix := range []string{"id", "uuid"} {
 		f := join.getField(fk + suffix)
 		if f != nil && sqlTypeEqual(base.PKs[0].SQLType, f.SQLType) {
-			fks = append(fks, f)
-			return fks
+			return []*Field{f}
 		}
 	}
 
 	return nil
 }
 
-func (t *Table) getField(name string) *Field {
-	return t.FieldsMap[name]
-}
-
-func scanJSONValue(v reflect.Value, b []byte) error {
+func scanJSONValue(v reflect.Value, rd types.Reader, n int) error {
 	if !v.CanSet() {
 		return fmt.Errorf("pg: Scan(non-pointer %s)", v.Type())
 	}
-	if b == nil {
+
+	if n == -1 {
 		v.Set(reflect.New(v.Type()).Elem())
 		return nil
 	}
-	dec := json.NewDecoder(bytes.NewReader(b))
+
+	dec := json.NewDecoder(rd)
 	dec.UseNumber()
 	return dec.Decode(v.Addr().Interface())
 }
@@ -808,11 +986,4 @@ func tryUnderscorePrefix(s string) string {
 		return internal.Underscore(s) + "_"
 	}
 	return s
-}
-
-func appendNew(dst []int, src ...int) []int {
-	cp := make([]int, len(dst)+len(src))
-	copy(cp, dst)
-	copy(cp[len(dst):], src)
-	return cp
 }

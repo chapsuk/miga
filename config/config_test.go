@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
+
 	"github.com/go-pg/pg"
 	"github.com/lib/pq"
 	"github.com/spf13/viper"

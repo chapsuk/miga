@@ -28,7 +28,7 @@ type Stats struct {
 	Timeouts uint32 // number of times a wait timeout occurred
 
 	TotalConns uint32 // number of total connections in the pool
-	FreeConns  uint32 // number of free connections in the pool
+	IdleConns  uint32 // number of idle connections in the pool
 	StaleConns uint32 // number of stale connections removed from the pool
 }
 
@@ -36,12 +36,12 @@ type Pooler interface {
 	NewConn() (*Conn, error)
 	CloseConn(*Conn) error
 
-	Get() (*Conn, bool, error)
-	Put(*Conn) error
-	Remove(*Conn) error
+	Get() (*Conn, error)
+	Put(*Conn)
+	Remove(*Conn)
 
 	Len() int
-	FreeLen() int
+	IdleLen() int
 	Stats() *Stats
 
 	Close() error
@@ -52,10 +52,11 @@ type Options struct {
 	OnClose func(*Conn) error
 
 	PoolSize           int
+	MinIdleConns       int
+	MaxConnAge         time.Duration
 	PoolTimeout        time.Duration
 	IdleTimeout        time.Duration
 	IdleCheckFrequency time.Duration
-	MaxAge             time.Duration
 }
 
 type ConnPool struct {
@@ -68,11 +69,11 @@ type ConnPool struct {
 
 	queue chan struct{}
 
-	connsMu sync.Mutex
-	conns   []*Conn
-
-	freeConnsMu sync.Mutex
-	freeConns   []*Conn
+	connsMu      sync.Mutex
+	conns        []*Conn
+	idleConns    []*Conn
+	poolSize     int
+	idleConnsLen int
 
 	stats Stats
 
@@ -87,7 +88,11 @@ func NewConnPool(opt *Options) *ConnPool {
 
 		queue:     make(chan struct{}, opt.PoolSize),
 		conns:     make([]*Conn, 0, opt.PoolSize),
-		freeConns: make([]*Conn, 0, opt.PoolSize),
+		idleConns: make([]*Conn, 0, opt.PoolSize),
+	}
+
+	for i := 0; i < opt.MinIdleConns; i++ {
+		p.checkMinIdleConns()
 	}
 
 	if opt.IdleTimeout > 0 && opt.IdleCheckFrequency > 0 {
@@ -97,7 +102,53 @@ func NewConnPool(opt *Options) *ConnPool {
 	return p
 }
 
+func (p *ConnPool) checkMinIdleConns() {
+	if p.opt.MinIdleConns == 0 {
+		return
+	}
+	if p.poolSize < p.opt.PoolSize && p.idleConnsLen < p.opt.MinIdleConns {
+		p.poolSize++
+		p.idleConnsLen++
+		go p.addIdleConn()
+	}
+}
+
+func (p *ConnPool) addIdleConn() {
+	cn, err := p.newConn(true)
+	if err != nil {
+		return
+	}
+
+	p.connsMu.Lock()
+	p.conns = append(p.conns, cn)
+	p.idleConns = append(p.idleConns, cn)
+	p.connsMu.Unlock()
+}
+
 func (p *ConnPool) NewConn() (*Conn, error) {
+	return p._NewConn(false)
+}
+
+func (p *ConnPool) _NewConn(pooled bool) (*Conn, error) {
+	cn, err := p.newConn(pooled)
+	if err != nil {
+		return nil, err
+	}
+
+	p.connsMu.Lock()
+	p.conns = append(p.conns, cn)
+	if pooled {
+		if p.poolSize < p.opt.PoolSize {
+			p.poolSize++
+		} else {
+			cn.pooled = false
+		}
+	}
+	p.connsMu.Unlock()
+	return cn, nil
+}
+
+func (p *ConnPool) newConn(pooled bool) (*Conn, error) {
 	if p.closed() {
 		return nil, ErrClosed
 	}
@@ -114,13 +165,9 @@ func (p *ConnPool) NewConn() (*Conn, error) {
 		}
 		return nil, err
 	}
-	atomic.StoreUint32(&p.dialErrorsNum, 0)
 
 	cn := NewConn(netConn)
-	p.connsMu.Lock()
-	p.conns = append(p.conns, cn)
-	p.connsMu.Unlock()
-
+	cn.pooled = pooled
 	return cn, nil
 }
 
@@ -156,62 +203,21 @@ func (p *ConnPool) getLastDialError() error {
 	return err
 }
 
-func (p *ConnPool) isStaleConn(cn *Conn) bool {
-	if p.opt.IdleTimeout == 0 && p.opt.MaxAge == 0 {
-		return false
-	}
-
-	now := time.Now()
-	if p.opt.IdleTimeout > 0 && now.Sub(cn.UsedAt) >= p.opt.IdleTimeout {
-		return true
-	}
-	if p.opt.MaxAge > 0 && now.Sub(cn.InitedAt) >= p.opt.MaxAge {
-		return true
-	}
-
-	return false
-}
-
-func (p *ConnPool) popFree() *Conn {
-	if len(p.freeConns) == 0 {
-		return nil
-	}
-
-	idx := len(p.freeConns) - 1
-	cn := p.freeConns[idx]
-	p.freeConns = p.freeConns[:idx]
-	return cn
-}
-
 // Get returns existed connection from the pool or creates a new one.
-func (p *ConnPool) Get() (*Conn, bool, error) {
+func (p *ConnPool) Get() (*Conn, error) {
 	if p.closed() {
-		return nil, false, ErrClosed
+		return nil, ErrClosed
 	}
 
-	select {
-	case p.queue <- struct{}{}:
-	default:
-		timer := timers.Get().(*time.Timer)
-		timer.Reset(p.opt.PoolTimeout)
-
-		select {
-		case p.queue <- struct{}{}:
-			if !timer.Stop() {
-				<-timer.C
-			}
-			timers.Put(timer)
-		case <-timer.C:
-			timers.Put(timer)
-			atomic.AddUint32(&p.stats.Timeouts, 1)
-			return nil, false, ErrPoolTimeout
-		}
+	err := p.waitTurn()
+	if err != nil {
+		return nil, err
 	}
 
 	for {
-		p.freeConnsMu.Lock()
-		cn := p.popFree()
-		p.freeConnsMu.Unlock()
+		p.connsMu.Lock()
+		cn := p.popIdle()
+		p.connsMu.Unlock()
 
 		if cn == nil {
 			break
@@ -223,49 +229,101 @@ func (p *ConnPool) Get() (*Conn, bool, error) {
 		}
 
 		atomic.AddUint32(&p.stats.Hits, 1)
-		return cn, false, nil
+		return cn, nil
 	}
 
 	atomic.AddUint32(&p.stats.Misses, 1)
 
-	newcn, err := p.NewConn()
+	newcn, err := p._NewConn(true)
 	if err != nil {
-		<-p.queue
-		return nil, false, err
+		p.freeTurn()
+		return nil, err
 	}
 
-	return newcn, true, nil
+	return newcn, nil
 }
 
-func (p *ConnPool) Put(cn *Conn) error {
-	if e := cn.CheckHealth(); e != nil {
-		internal.Logf(e.Error())
-		return p.Remove(cn)
+func (p *ConnPool) getTurn() {
+	p.queue <- struct{}{}
+}
+
+func (p *ConnPool) waitTurn() error {
+	select {
+	case p.queue <- struct{}{}:
+		return nil
+	default:
+		timer := timers.Get().(*time.Timer)
+		timer.Reset(p.opt.PoolTimeout)
+
+		select {
+		case p.queue <- struct{}{}:
+			if !timer.Stop() {
+				<-timer.C
+			}
+			timers.Put(timer)
+			return nil
+		case <-timer.C:
+			timers.Put(timer)
+			atomic.AddUint32(&p.stats.Timeouts, 1)
+			return ErrPoolTimeout
+		}
 	}
-	p.freeConnsMu.Lock()
-	p.freeConns = append(p.freeConns, cn)
-	p.freeConnsMu.Unlock()
-	<-p.queue
-	return nil
 }
 
-func (p *ConnPool) Remove(cn *Conn) error {
-	_ = p.CloseConn(cn)
+func (p *ConnPool) freeTurn() {
 	<-p.queue
-	return nil
+}
+
+func (p *ConnPool) popIdle() *Conn {
+	if len(p.idleConns) == 0 {
+		return nil
+	}
+
+	idx := len(p.idleConns) - 1
+	cn := p.idleConns[idx]
+	p.idleConns = p.idleConns[:idx]
+	p.idleConnsLen--
+	p.checkMinIdleConns()
+	return cn
+}
+
+func (p *ConnPool) Put(cn *Conn) {
+	if !cn.pooled {
+		p.Remove(cn)
+		return
+	}
+
+	p.connsMu.Lock()
+	p.idleConns = append(p.idleConns, cn)
+	p.idleConnsLen++
+	p.connsMu.Unlock()
+	p.freeTurn()
+}
+
+func (p *ConnPool) Remove(cn *Conn) {
+	p.removeConn(cn)
+	p.freeTurn()
+	_ = p.closeConn(cn)
 }
 
 func (p *ConnPool) CloseConn(cn *Conn) error {
+	p.removeConn(cn)
+	return p.closeConn(cn)
+}
+
+func (p *ConnPool) removeConn(cn *Conn) {
 	p.connsMu.Lock()
 	for i, c := range p.conns {
 		if c == cn {
 			p.conns = append(p.conns[:i], p.conns[i+1:]...)
+			if cn.pooled {
+				p.poolSize--
+				p.checkMinIdleConns()
+			}
 			break
 		}
 	}
 	p.connsMu.Unlock()
-
-	return p.closeConn(cn)
 }
 
 func (p *ConnPool) closeConn(cn *Conn) error {
@@ -278,26 +336,29 @@ func (p *ConnPool) closeConn(cn *Conn) error {
 // Len returns total number of connections.
 func (p *ConnPool) Len() int {
 	p.connsMu.Lock()
-	l := len(p.conns)
+	n := len(p.conns)
 	p.connsMu.Unlock()
-	return l
+	return n
 }
 
-// FreeLen returns number of free connections.
-func (p *ConnPool) FreeLen() int {
-	p.freeConnsMu.Lock()
-	l := len(p.freeConns)
-	p.freeConnsMu.Unlock()
-	return l
+// IdleLen returns number of idle connections.
+func (p *ConnPool) IdleLen() int {
+	p.connsMu.Lock()
+	n := p.idleConnsLen
+	p.connsMu.Unlock()
+	return n
 }
 
 func (p *ConnPool) Stats() *Stats {
+	idleLen := p.IdleLen()
 	return &Stats{
-		Hits:       atomic.LoadUint32(&p.stats.Hits),
-		Misses:     atomic.LoadUint32(&p.stats.Misses),
-		Timeouts:   atomic.LoadUint32(&p.stats.Timeouts),
+		Hits:     atomic.LoadUint32(&p.stats.Hits),
+		Misses:   atomic.LoadUint32(&p.stats.Misses),
+		Timeouts: atomic.LoadUint32(&p.stats.Timeouts),
+
 		TotalConns: uint32(p.Len()),
-		FreeConns:  uint32(p.FreeLen()),
+		IdleConns:  uint32(idleLen),
+		StaleConns: atomic.LoadUint32(&p.stats.StaleConns),
 	}
 }
 
@@ -305,36 +366,87 @@ func (p *ConnPool) closed() bool {
 	return atomic.LoadUint32(&p._closed) == 1
 }
 
+func (p *ConnPool) Filter(fn func(*Conn) bool) error {
+	var firstErr error
+	p.connsMu.Lock()
+	for _, cn := range p.conns {
+		if fn(cn) {
+			if err := p.closeConn(cn); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	p.connsMu.Unlock()
+	return firstErr
+}
+
 func (p *ConnPool) Close() error {
 	if !atomic.CompareAndSwapUint32(&p._closed, 0, 1) {
 		return ErrClosed
 	}
 
-	p.connsMu.Lock()
 	var firstErr error
+	p.connsMu.Lock()
 	for _, cn := range p.conns {
-		if cn == nil {
-			continue
-		}
 		if err := p.closeConn(cn); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
 	p.conns = nil
+	p.poolSize = 0
+	p.idleConns = nil
+	p.idleConnsLen = 0
 	p.connsMu.Unlock()
 
-	p.freeConnsMu.Lock()
-	p.freeConns = nil
-	p.freeConnsMu.Unlock()
-
 	return firstErr
+}
+
+func (p *ConnPool) reapStaleConn() *Conn {
+	if len(p.idleConns) == 0 {
+		return nil
+	}
+
+	cn := p.idleConns[0]
+	if !p.isStaleConn(cn) {
+		return nil
+	}
+
+	p.idleConns = append(p.idleConns[:0], p.idleConns[1:]...)
+	p.idleConnsLen--
+
+	return cn
+}
+
+func (p *ConnPool) ReapStaleConns() (int, error) {
+	var n int
+	for {
+		p.getTurn()
+
+		p.connsMu.Lock()
+		cn := p.reapStaleConn()
+		p.connsMu.Unlock()
+
+		if cn != nil {
+			p.removeConn(cn)
+		}
+
+		p.freeTurn()
+
+		if cn != nil {
+			p.closeConn(cn)
+			n++
+		} else {
+			break
+		}
+	}
+	return n, nil
 }
 
 func (p *ConnPool) reaper(frequency time.Duration) {
 	ticker := time.NewTicker(frequency)
 	defer ticker.Stop()
 
-	for _ = range ticker.C {
+	for range ticker.C {
 		if p.closed() {
 			break
 		}
@@ -347,38 +459,18 @@ func (p *ConnPool) reaper(frequency time.Duration) {
 	}
 }
 
-func (p *ConnPool) ReapStaleConns() (int, error) {
-	var n int
-	for {
-		p.queue <- struct{}{}
-		p.freeConnsMu.Lock()
-
-		reaped := p.reapStaleConn()
-
-		p.freeConnsMu.Unlock()
-		<-p.queue
-
-		if reaped {
-			n++
-		} else {
-			break
-		}
-	}
-	return n, nil
-}
-
-func (p *ConnPool) reapStaleConn() bool {
-	if len(p.freeConns) == 0 {
+func (p *ConnPool) isStaleConn(cn *Conn) bool {
+	if p.opt.IdleTimeout == 0 && p.opt.MaxConnAge == 0 {
 		return false
 	}
 
-	cn := p.freeConns[0]
-	if !p.isStaleConn(cn) {
-		return false
+	now := time.Now()
+	if p.opt.IdleTimeout > 0 && now.Sub(cn.UsedAt()) >= p.opt.IdleTimeout {
+		return true
+	}
+	if p.opt.MaxConnAge > 0 && now.Sub(cn.createdAt) >= p.opt.MaxConnAge {
+		return true
 	}
 
-	_ = p.CloseConn(cn)
-	p.freeConns = append(p.freeConns[:0], p.freeConns[1:]...)
-
-	return true
+	return false
 }

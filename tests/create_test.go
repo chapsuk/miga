@@ -5,7 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/chapsuk/miga/driver"
+	"miga/driver"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 

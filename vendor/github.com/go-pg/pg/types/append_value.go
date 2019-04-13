@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/go-pg/pg/internal"
 )
 
 var driverValuerType = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
@@ -34,7 +36,7 @@ func init() {
 		reflect.Float64:       appendFloatValue,
 		reflect.Complex64:     nil,
 		reflect.Complex128:    nil,
-		reflect.Array:         nil,
+		reflect.Array:         appendJSONValue,
 		reflect.Chan:          nil,
 		reflect.Func:          nil,
 		reflect.Interface:     appendIfaceValue,
@@ -59,6 +61,8 @@ func appender(typ reflect.Type, pgArray bool) AppenderFunc {
 		return appendIPValue
 	case ipNetType:
 		return appendIPNetValue
+	case jsonRawMessageType:
+		return appendJSONRawMessageValue
 	}
 
 	if typ.Implements(appenderType) {
@@ -99,13 +103,9 @@ func ptrAppenderFunc(typ reflect.Type) AppenderFunc {
 }
 
 func appendValue(b []byte, v reflect.Value, quote int) []byte {
-	if v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			return AppendNull(b, quote)
-		}
-		return appendValue(b, v.Elem(), quote)
+	if v.Kind() == reflect.Ptr && v.IsNil() {
+		return AppendNull(b, quote)
 	}
-
 	appender := Appender(v.Type())
 	return appender(b, v, quote)
 }
@@ -126,16 +126,16 @@ func appendUintValue(b []byte, v reflect.Value, _ int) []byte {
 	return strconv.AppendUint(b, v.Uint(), 10)
 }
 
-func appendFloatValue(b []byte, v reflect.Value, _ int) []byte {
-	return appendFloat(b, v.Float())
+func appendFloatValue(b []byte, v reflect.Value, quote int) []byte {
+	return appendFloat(b, v.Float(), quote)
 }
 
 func appendBytesValue(b []byte, v reflect.Value, quote int) []byte {
-	return appendBytes(b, v.Bytes(), quote)
+	return AppendBytes(b, v.Bytes(), quote)
 }
 
 func appendArrayBytesValue(b []byte, v reflect.Value, quote int) []byte {
-	return appendBytes(b, v.Slice(0, v.Len()).Bytes(), quote)
+	return AppendBytes(b, v.Slice(0, v.Len()).Bytes(), quote)
 }
 
 func appendStringValue(b []byte, v reflect.Value, quote int) []byte {
@@ -170,6 +170,10 @@ func appendIPValue(b []byte, v reflect.Value, quote int) []byte {
 func appendIPNetValue(b []byte, v reflect.Value, quote int) []byte {
 	ipnet := v.Interface().(net.IPNet)
 	return AppendString(b, ipnet.String(), quote)
+}
+
+func appendJSONRawMessageValue(b []byte, v reflect.Value, quote int) []byte {
+	return AppendString(b, internal.BytesToString(v.Bytes()), quote)
 }
 
 func appendAppenderValue(b []byte, v reflect.Value, quote int) []byte {
