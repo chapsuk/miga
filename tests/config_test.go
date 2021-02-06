@@ -73,16 +73,6 @@ func TestConfig(t *testing.T) {
 					err = os.RemoveAll(dir)
 					So(err, ShouldBeNil)
 				})
-
-				Convey("Miga should fail up cmd with empty DSN", func() {
-					ctx := cli.NewContext(nil, &flag.FlagSet{}, nil)
-
-					err = commands.Up(ctx, d)
-					So(err, ShouldNotBeNil)
-
-					err = commands.Up(ctx, s)
-					So(err, ShouldNotBeNil)
-				})
 			})
 		}
 
