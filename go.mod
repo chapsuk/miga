@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/pressly/goose v2.6.0+incompatible
+	github.com/pressly/goose v2.7.0+incompatible
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/viper v1.3.2
 	go.uber.org/atomic v1.3.2 // indirect
