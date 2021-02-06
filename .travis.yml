@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.12.x
+  - 1.15.x
 
 env:
   global: 
@@ -9,7 +9,7 @@ env:
 
 services:
   - mysql
-  - postgres
+  - postgresql
 
 before_install:
   - mysql -e "CREATE DATABASE miga;"

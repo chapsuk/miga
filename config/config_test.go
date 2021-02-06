@@ -137,6 +137,7 @@ var pgCredentialsTable = []testCase{
 			Options:  "",
 		},
 		invalidDSN: true,
+		shouldErr:  true,
 		dsn:        "postgres://foo:bar/@127.0.0.1:11132/test?",
 	},
 }
