@@ -9,6 +9,7 @@ import (
 
 	"miga/driver"
 
+	_ "github.com/ClickHouse/clickhouse-go"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -96,6 +97,9 @@ var migrationCases = []testCase{
 			}
 			So(count, ShouldEqual, 1)
 			So(r.Err(), ShouldBeNil)
+		},
+		Condition: func(driverName, dialect string) bool {
+			return dialect != "clickhouse"
 		},
 	},
 	{
@@ -277,11 +281,16 @@ func TestMigrations(t *testing.T) {
 				strings.ToUpper(dialect),
 			)
 			Convey(desc, t, func() {
+				dir := "./migrations/" + string(driverName)
+				if dialect == "clickhouse" {
+					dir += "_clickhouse"
+				}
+
 				driverInst, err := driver.New(&driver.Config{
 					Name:             string(driverName),
 					Dialect:          dialect,
 					Dsn:              string(dsns[dialect]),
-					Dir:              "./migrations/" + string(driverName),
+					Dir:              dir,
 					VersionTableName: string(driverName) + "_db_version",
 				})
 				So(err, ShouldBeNil)

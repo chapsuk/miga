@@ -1,5 +1,19 @@
 # github.com/BurntSushi/toml v0.3.1
 ## explicit
+# github.com/ClickHouse/clickhouse-go v1.4.3
+## explicit
+github.com/ClickHouse/clickhouse-go
+github.com/ClickHouse/clickhouse-go/lib/binary
+github.com/ClickHouse/clickhouse-go/lib/cityhash102
+github.com/ClickHouse/clickhouse-go/lib/column
+github.com/ClickHouse/clickhouse-go/lib/data
+github.com/ClickHouse/clickhouse-go/lib/leakypool
+github.com/ClickHouse/clickhouse-go/lib/lz4
+github.com/ClickHouse/clickhouse-go/lib/protocol
+github.com/ClickHouse/clickhouse-go/lib/types
+github.com/ClickHouse/clickhouse-go/lib/writebuffer
+# github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58
+github.com/cloudflare/golz4
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/go-pg/pg v8.0.3+incompatible
@@ -66,7 +80,7 @@ github.com/pelletier/go-toml
 # github.com/pkg/errors v0.8.1
 ## explicit
 github.com/pkg/errors
-# github.com/pressly/goose v2.7.0+incompatible
+# github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210207132231-8dfe4480e4dd+incompatible
 ## explicit
 github.com/pressly/goose
 # github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d

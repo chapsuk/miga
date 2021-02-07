@@ -12,6 +12,7 @@ services:
   - postgresql
 
 before_install:
+  - docker run --rm=true -p 9000:9000 --name miga-clickhouse -e CLICKHOUSE_DB=miga -e CLICKHOUSE_USER=user -e CLICKHOUSE_PASSWORD=password -d yandex/clickhouse-server
   - mysql -e "CREATE DATABASE miga;"
   - mysql -e "CREATE USER user@localhost IDENTIFIED BY 'password'";
   - mysql -e "GRANT ALL ON miga.* TO user@localhost";
