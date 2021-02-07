@@ -1,7 +1,8 @@
 NAME = miga
-VERSION ?= v0.7.3
+VERSION ?= v0.8.0
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
+CLICKHOUSE_CONTAINER_NAME = miga-clickhouse
 IMAGE_NAME = chapsuk/$(NAME)
 
 TRAVIS_POSTGRES = postgres://postgres:@127.0.0.1:5432/miga?sslmode=disable
@@ -24,13 +25,13 @@ release: docker_build
 .PHONY: test
 test:
 	go clean -testcache
-	go test -v -race ./...
+	go test -mod=vendor -v -race ./...
 
 .PHONY: db_up
-db_up: postgres_up mysql_up
+db_up: postgres_up mysql_up clickhouse_up
 
 .PHONY: db_down
-db_down: postgres_down mysql_down
+db_down: postgres_down mysql_down clickhouse_down
 
 .PHONY: postgres_up
 postgres_up: postgres_down
@@ -54,6 +55,21 @@ mysql_up: mysql_down
 		-e MYSQL_PASSWORD=password \
 		-e MYSQL_ROOT_PASSWORD=mysql \
 		--name=$(MYSQL_CONTAINER_NAME) mysql:5.7
+
+.PHONY: clickhouse_down
+clickhouse_down:
+	-docker rm -f $(CLICKHOUSE_CONTAINER_NAME)
+
+.PHONY: clickhouse_up
+clickhouse_up: clickhouse_down
+	docker run -d \
+		-p 8123:8123 \
+		-p 9000:9000 \
+		-e CLICKHOUSE_DB=miga \
+		-e CLICKHOUSE_USER=user \
+		-e CLICKHOUSE_PASSWORD=password \
+		--name=$(CLICKHOUSE_CONTAINER_NAME) \
+		--ulimit nofile=262144:262144 yandex/clickhouse-server
 
 .PHONY: mysql_down
 mysql_down:

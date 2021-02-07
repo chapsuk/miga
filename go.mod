@@ -2,8 +2,11 @@ module miga
 
 go 1.15
 
+replace github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210207132231-8dfe4480e4dd+incompatible
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/ClickHouse/clickhouse-go v1.4.3
 	github.com/go-pg/pg v8.0.3+incompatible
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang-migrate/migrate/v4 v4.2.5
@@ -13,7 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.15.0 // indirect
 	github.com/onsi/gomega v1.10.5 // indirect
 	github.com/pkg/errors v0.8.1
-	github.com/pressly/goose v2.6.0+incompatible
+	github.com/pressly/goose v2.7.0+incompatible
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/viper v1.3.2
 	go.uber.org/atomic v1.3.2 // indirect

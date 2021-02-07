@@ -15,11 +15,11 @@ Aimed to add extra features and hide some limitations of existing golang migrati
 
 ## Supporting
 
-PackageName | Version | Postgres            | MySQL
------------ | ------- | ------------------- | --------
-[goose](https://github.com/pressly/goose)       |  2.6.0  |  :heavy_check_mark: | :heavy_check_mark:
-[migrate](https://github.com/golang-migrate/migrate)     |  4.2.5  |  :heavy_check_mark: | :heavy_check_mark:
-[impg](https://github.com/im-kulikov/migrate)        |   0.1   |  :heavy_check_mark: 
+PackageName | Version | Postgres            | MySQL    | Clickhouse
+----------- | ------- | ------------------- | -------- | --------
+[goose](https://github.com/pressly/goose)       |  2.7.0 (+ [patches](https://github.com/pressly/goose/compare/v2.7.0...chapsuk:clickhouse?expand=1))  |  :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
+[migrate](https://github.com/golang-migrate/migrate)     |  4.2.5  |  :heavy_check_mark: | :heavy_check_mark: |
+[impg](https://github.com/im-kulikov/migrate)        |   0.1   |  :heavy_check_mark: | |
 
 
 ## Features

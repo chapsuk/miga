@@ -127,6 +127,12 @@ func fillDBConfig(cfg *driver.Config) {
 		cfg.Dsn = viper.GetString("mysql.dsn")
 		return
 	}
+
+	if viper.IsSet("clickhouse.dsn") {
+		cfg.Dialect = "clickhouse"
+		cfg.Dsn = viper.GetString("clickhouse.dsn")
+		return
+	}
 }
 
 func dirExists(dir string) bool {

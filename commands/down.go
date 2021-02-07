@@ -17,6 +17,5 @@ func DownTo(ctx *cli.Context, d driver.Interface) error {
 	if err != nil {
 		return err
 	}
-
 	return d.DownTo(version)
 }

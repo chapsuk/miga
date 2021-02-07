@@ -21,13 +21,14 @@ type (
 
 var (
 	drivers = map[driverName]dialects{
-		"goose":   []string{"mysql", "postgres"},
+		"goose":   []string{"mysql", "postgres", "clickhouse"},
 		"migrate": []string{"mysql", "postgres"},
 		"impg":    []string{"postgres"},
 	}
 
 	dsns = map[string]dsn{
-		"postgres": "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable",
-		"mysql":    "user:password@tcp(127.0.0.1:3306)/miga",
+		"postgres":   "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable",
+		"mysql":      "user:password@tcp(127.0.0.1:3306)/miga",
+		"clickhouse": "tcp://127.0.0.1:9000?username=user&password=password&database=miga",
 	}
 )
