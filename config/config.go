@@ -133,6 +133,12 @@ func fillDBConfig(cfg *driver.Config) {
 		cfg.Dsn = viper.GetString("clickhouse.dsn")
 		return
 	}
+
+	if viper.IsSet("vertica.dsn") {
+		cfg.Dialect = "vertica"
+		cfg.Dsn = viper.GetString("vertica.dsn")
+		return
+	}
 }
 
 func dirExists(dir string) bool {

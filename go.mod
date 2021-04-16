@@ -1,8 +1,8 @@
 module miga
 
-go 1.15
+go 1.16
 
-replace github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210207132231-8dfe4480e4dd+incompatible
+replace github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210416144611-53c250b3ac9b+incompatible
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -19,6 +19,7 @@ require (
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/viper v1.3.2
+	github.com/vertica/vertica-sql-go v1.1.1
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1

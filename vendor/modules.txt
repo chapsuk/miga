@@ -80,7 +80,7 @@ github.com/pelletier/go-toml
 # github.com/pkg/errors v0.8.1
 ## explicit
 github.com/pkg/errors
-# github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210207132231-8dfe4480e4dd+incompatible
+# github.com/pressly/goose v2.7.0+incompatible => github.com/chapsuk/goose v2.1.1-0.20210416144611-53c250b3ac9b+incompatible
 ## explicit
 github.com/pressly/goose
 # github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d
@@ -104,6 +104,14 @@ github.com/spf13/pflag
 # github.com/spf13/viper v1.3.2
 ## explicit
 github.com/spf13/viper
+# github.com/vertica/vertica-sql-go v1.1.1
+## explicit
+github.com/vertica/vertica-sql-go
+github.com/vertica/vertica-sql-go/common
+github.com/vertica/vertica-sql-go/logger
+github.com/vertica/vertica-sql-go/msgs
+github.com/vertica/vertica-sql-go/parse
+github.com/vertica/vertica-sql-go/rowcache
 # go.uber.org/atomic v1.3.2
 ## explicit
 go.uber.org/atomic
