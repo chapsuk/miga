@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/ClickHouse/clickhouse-go"
 	. "github.com/smartystreets/goconvey/convey"
+	_ "github.com/vertica/vertica-sql-go"
 )
 
 var migrationCases = []testCase{
@@ -21,7 +22,7 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			r, err := db.Query("SELECT COUNT(*) FROM users")
+			r, err := db.Query("SELECT COUNT(*) FROM users where migastas >= 0")
 			So(err, ShouldBeNil)
 			count := 1
 			for r.Next() {
@@ -55,7 +56,7 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldBeNil)
 			count := 1
 			for r.Next() {
@@ -72,7 +73,7 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldBeNil)
 			count := 1
 			for r.Next() {
@@ -89,7 +90,7 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			r, err := db.Query("SELECT COUNT(*) FROM users WHERE name='Abib;Rabib'")
+			r, err := db.Query("SELECT COUNT(*) FROM users WHERE name='Abib;Rabib' and migastas >= 0")
 			So(err, ShouldBeNil)
 			count := 1
 			for r.Next() {
@@ -177,7 +178,7 @@ var migrationCases = []testCase{
 			So(err, ShouldNotBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			r, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldBeNil)
 			count := 1
 			for r.Next() {
@@ -208,7 +209,7 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			_, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			_, err := db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldNotBeNil)
 		},
 	},
@@ -221,8 +222,8 @@ var migrationCases = []testCase{
 		Assert: func(db *sql.DB) {
 			_, err := db.Query("SELECT COUNT(*) FROM wallets")
 			So(err, ShouldNotBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users")
-			So(err, ShouldNotBeNil)
+			// _, err = db.Query("SELECT COUNT(*) FROM users")
+			// So(err, ShouldNotBeNil)
 		},
 	},
 	{
@@ -234,9 +235,9 @@ var migrationCases = []testCase{
 		Assert: func(db *sql.DB) {
 			_, err := db.Query("SELECT COUNT(*) FROM wallets")
 			So(err, ShouldBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users")
+			_, err = db.Query("SELECT COUNT(*) FROM users where migastas >= 0")
 			So(err, ShouldBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldBeNil)
 			_, err = db.Query("SELECT COUNT(*) FROM never")
 			So(err, ShouldNotBeNil)
@@ -249,9 +250,9 @@ var migrationCases = []testCase{
 			So(err, ShouldBeNil)
 		},
 		Assert: func(db *sql.DB) {
-			_, err := db.Query("SELECT COUNT(*) FROM users")
+			_, err := db.Query("SELECT COUNT(*) FROM users where migastas >= 0")
 			So(err, ShouldBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldNotBeNil)
 		},
 	},
@@ -264,9 +265,9 @@ var migrationCases = []testCase{
 		Assert: func(db *sql.DB) {
 			_, err := db.Query("SELECT COUNT(*) FROM wallets")
 			So(err, ShouldNotBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users")
+			_, err = db.Query("SELECT COUNT(*) FROM users where migastas >= 0")
 			So(err, ShouldNotBeNil)
-			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test'")
+			_, err = db.Query("SELECT COUNT(*) FROM users WHERE email='test' and migastas >= 0")
 			So(err, ShouldNotBeNil)
 		},
 	},
@@ -283,7 +284,7 @@ func TestMigrations(t *testing.T) {
 			Convey(desc, t, func() {
 				dir := "./migrations/" + string(driverName)
 				if dialect == "clickhouse" {
-					dir += "_clickhouse"
+					dir += "_" + dialect
 				}
 
 				driverInst, err := driver.New(&driver.Config{

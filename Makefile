@@ -3,6 +3,7 @@ VERSION ?= v0.8.0
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 CLICKHOUSE_CONTAINER_NAME = miga-clickhouse
+VERTICA_CONTAINER_NAME = miga-vertica
 IMAGE_NAME = chapsuk/$(NAME)
 
 TRAVIS_POSTGRES = postgres://postgres:@127.0.0.1:5432/miga?sslmode=disable
@@ -28,10 +29,10 @@ test:
 	go test -mod=vendor -v -race ./...
 
 .PHONY: db_up
-db_up: postgres_up mysql_up clickhouse_up
+db_up: postgres_up mysql_up clickhouse_up vertica_up
 
 .PHONY: db_down
-db_down: postgres_down mysql_down clickhouse_down
+db_down: postgres_down mysql_down clickhouse_down vertica_down
 
 .PHONY: postgres_up
 postgres_up: postgres_down
@@ -56,6 +57,10 @@ mysql_up: mysql_down
 		-e MYSQL_ROOT_PASSWORD=mysql \
 		--name=$(MYSQL_CONTAINER_NAME) mysql:5.7
 
+.PHONY: mysql_down
+mysql_down:
+	-docker rm -f $(MYSQL_CONTAINER_NAME)
+
 .PHONY: clickhouse_down
 clickhouse_down:
 	-docker rm -f $(CLICKHOUSE_CONTAINER_NAME)
@@ -71,6 +76,13 @@ clickhouse_up: clickhouse_down
 		--name=$(CLICKHOUSE_CONTAINER_NAME) \
 		--ulimit nofile=262144:262144 yandex/clickhouse-server
 
-.PHONY: mysql_down
-mysql_down:
-	-docker rm -f $(MYSQL_CONTAINER_NAME)
+.PHONY: vertica_down
+vertica_down:
+	-docker rm -f $(VERTICA_CONTAINER_NAME)
+
+.PHONY: vertica_up
+vertica_up: vertica_down
+	docker run -d \
+		-p 5433:5433 \
+		--name=$(VERTICA_CONTAINER_NAME) \
+		dataplatform/docker-vertica

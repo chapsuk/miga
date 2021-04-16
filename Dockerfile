@@ -1,4 +1,4 @@
-FROM golang:1.15.7-alpine3.13
+FROM golang:1.16.3-alpine3.13
 RUN apk add make
 ADD . /go/src/miga
 WORKDIR /go/src/miga

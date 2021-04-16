@@ -16,7 +16,7 @@ import (
 func TestConvert(t *testing.T) {
 	for driverName, dialects := range drivers {
 		for _, dialect := range dialects {
-			if dialect == "clickhouse" {
+			if dialect == "clickhouse" || dialect == "vertica" {
 				continue
 			}
 			for tdriverName := range drivers {
