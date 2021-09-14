@@ -33,6 +33,11 @@ type (
 		Dir              string
 		VersionTableName string
 		Enabled          bool
+
+		ClickhouseSchema      string
+		ClickhouseClusterName string
+		ClickhouseEngine      string
+		ClickhouseSharded     bool
 	}
 
 	Interface interface {
@@ -57,6 +62,10 @@ func New(cfg *Config) (Interface, error) {
 			cfg.Dsn,
 			cfg.VersionTableName,
 			cfg.Dir,
+			cfg.ClickhouseSchema,
+			cfg.ClickhouseClusterName,
+			cfg.ClickhouseEngine,
+			cfg.ClickhouseSharded,
 		)
 	case Migrate:
 		return migrate.New(

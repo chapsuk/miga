@@ -16,7 +16,7 @@ func Command() *cli.Command {
 		Name:  "all",
 		Usage: "All command combine migration and seed command",
 		Subcommands: cli.CommandsByName([]*cli.Command{
-			&cli.Command{
+			{
 				Name:  "up",
 				Usage: "Up db to latest migration version and to latest seed.",
 				Action: func(ctx *cli.Context) error {
