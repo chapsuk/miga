@@ -125,7 +125,7 @@ func (g Goose) clickhouseHackEnsureTable() {
 
 		queries = append(queries, fmt.Sprintf(`
 			CREATE TABLE IF NOT EXISTS %s ON CLUSTER '%s' AS %s_shard
-			ENGINE = Distributed('%s', %s, %s, rand())
+			ENGINE = Distributed('%s', %s, %s_shard, rand())
 		`, schemaTable, g.clickhouseClusterName, schemaTable, g.clickhouseClusterName, g.clickhouseSchema, g.versionTableName))
 	} else {
 		queries = append(queries, fmt.Sprintf(`
