@@ -1,6 +1,6 @@
 package msgs
 
-// Copyright (c) 2019 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,7 +32,12 @@ package msgs
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-import "fmt"
+import (
+	"fmt"
+	"os/user"
+
+	"github.com/elastic/go-sysinfo"
+)
 
 // FEStartupMsg docs
 type FEStartupMsg struct {
@@ -43,10 +48,26 @@ type FEStartupMsg struct {
 	Database        string
 	SessionID       string
 	ClientPID       int
+	ClientOS        string
+	OSUsername      string
+	Autocommit      string
 }
 
 // Flatten docs
 func (m *FEStartupMsg) Flatten() ([]byte, byte) {
+
+	m.ClientOS = ""
+	host, err := sysinfo.Host()
+	if err == nil {
+		info := host.Info()
+		m.ClientOS = fmt.Sprintf("%s %s %s", info.OS.Name, info.KernelVersion, info.Architecture)
+	}
+
+	m.OSUsername = ""
+	currentUser, err := user.Current()
+	if err == nil {
+		m.OSUsername = currentUser.Username
+	}
 
 	buf := newMsgBuffer()
 	const fixedProtocolVersion uint32 = 0x00030005
@@ -69,6 +90,9 @@ func (m *FEStartupMsg) Flatten() ([]byte, byte) {
 	buf.appendLabeledString("client_version", m.DriverVersion)
 	buf.appendLabeledString("client_label", m.SessionID)
 	buf.appendLabeledString("client_pid", fmt.Sprintf("%d", m.ClientPID))
+	buf.appendLabeledString("client_os", m.ClientOS)
+	buf.appendLabeledString("client_os_user_name", m.OSUsername)
+	buf.appendLabeledString("autocommit", m.Autocommit)
 	buf.appendBytes([]byte{0})
 
 	return buf.bytes(), 0
@@ -76,12 +100,15 @@ func (m *FEStartupMsg) Flatten() ([]byte, byte) {
 
 func (m *FEStartupMsg) String() string {
 	return fmt.Sprintf(
-		"Startup (packet): ProtocolVersion:%08X, DriverName='%s', DriverVersion='%s', UserName='%s', Database='%s', SessionID='%s', ClientPID=%d",
+		"Startup (packet): ProtocolVersion:%08X, DriverName='%s', DriverVersion='%s', UserName='%s', Database='%s', SessionID='%s', ClientPID=%d, ClientOS='%s', ClientOSUserName='%s', Autocommit='%s'",
 		m.ProtocolVersion,
 		m.DriverName,
 		m.DriverVersion,
 		m.Username,
 		m.Database,
 		m.SessionID,
-		m.ClientPID)
+		m.ClientPID,
+		m.ClientOS,
+		m.OSUsername,
+		m.Autocommit)
 }

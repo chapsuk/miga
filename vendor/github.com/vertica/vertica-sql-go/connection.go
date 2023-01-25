@@ -1,6 +1,6 @@
 package vertigo
 
-// Copyright (c) 2019 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -56,6 +57,42 @@ var (
 	connectionLogger = logger.New("connection")
 )
 
+const (
+	tlsModeServer       = "server"
+	tlsModeServerStrict = "server-strict"
+	tlsModeNone         = "none"
+)
+
+type _tlsConfigs struct {
+	m map[string]*tls.Config
+	sync.RWMutex
+}
+
+func (t *_tlsConfigs) add(name string, config *tls.Config) error {
+	t.Lock()
+	defer t.Unlock()
+	t.m[name] = config
+	return nil
+}
+
+func (t *_tlsConfigs) get(name string) (*tls.Config, bool) {
+	t.RLock()
+	defer t.RUnlock()
+	conf, ok := t.m[name]
+	return conf, ok
+}
+
+var tlsConfigs = &_tlsConfigs{m: make(map[string]*tls.Config)}
+
+// db, err := sql.Open("vertica", "user@tcp(localhost:3306)/test?tlsmode=custom")
+// reserved modes: 'server', 'server-strict' or 'none'
+func RegisterTLSConfig(name string, config *tls.Config) error {
+	if name == tlsModeServer || name == tlsModeServerStrict || name == tlsModeNone {
+		return fmt.Errorf("config name '%s' is reserved therefore cannot be used", name)
+	}
+	return tlsConfigs.add(name, config)
+}
+
 // Connection represents a connection to Vertica
 type connection struct {
 	driver.Conn
@@ -68,8 +105,10 @@ type connection struct {
 	cancelKey        uint32
 	transactionState byte
 	usePreparedStmts bool
+	connHostsList    []string
 	scratch          [512]byte
 	sessionID        string
+	autocommit       string
 	serverTZOffset   string
 	dead             bool // used if a ROLLBACK severity error is encountered
 	sessMutex        sync.Mutex
@@ -149,6 +188,10 @@ func (v *connection) Ping(ctx context.Context) error {
 	if err != nil {
 		return driver.ErrBadConn
 	}
+	var val interface{}
+	if err := rows.Next([]driver.Value{val}); err != nil {
+		return driver.ErrBadConn
+	}
 	rows.Close()
 	return nil
 }
@@ -175,25 +218,48 @@ func newConnection(connString string) (*connection, error) {
 	}
 
 	result.clientPID = os.Getpid()
-	result.sessionID = fmt.Sprintf("%s-%s-%d-%d", driverName, driverVersion, result.clientPID, time.Now().Unix())
+	if client_label := result.connURL.Query().Get("client_label"); client_label != "" {
+		result.sessionID = client_label
+	} else {
+		result.sessionID = fmt.Sprintf("%s-%s-%d-%d", driverName, driverVersion, result.clientPID, time.Now().Unix())
+	}
 
 	// Read the interpolate flag.
 	if iFlag := result.connURL.Query().Get("use_prepared_statements"); iFlag != "" {
 		result.usePreparedStmts = iFlag == "1"
 	}
 
+	// Read Autocommit flag.
+	if iFlag := result.connURL.Query().Get("autocommit"); iFlag == "" || iFlag == "1" {
+		result.autocommit = "on"
+	} else {
+		result.autocommit = "off"
+	}
+
 	// Read connection load balance flag.
 	loadBalanceFlag := result.connURL.Query().Get("connection_load_balance")
 
-	sslFlag := strings.ToLower(result.connURL.Query().Get("tlsmode"))
-	if sslFlag == "" {
-		sslFlag = "none"
+	// Read connection failover flag.
+	backupHostsStr := result.connURL.Query().Get("backup_server_node")
+	if backupHostsStr == "" {
+		result.connHostsList = []string{result.connURL.Host}
+	} else {
+		// Parse comma-separated list of backup host-port pairs
+		hosts := strings.Split(backupHostsStr, ",")
+		// Push target host to front of the hosts list
+		result.connHostsList = append([]string{result.connURL.Host}, hosts...)
 	}
 
-	result.conn, err = net.Dial("tcp", result.connURL.Host)
+	// Read SSL/TLS flag.
+	sslFlag := strings.ToLower(result.connURL.Query().Get("tlsmode"))
+	if sslFlag == "" {
+		sslFlag = tlsModeNone
+	}
+
+	result.conn, err = result.establishSocketConnection()
 
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to %s (%s)", result.connURL.Host, err.Error())
+		return nil, err
 	}
 
 	// Load Balancing
@@ -203,7 +269,7 @@ func newConnection(connString string) (*connection, error) {
 		}
 	}
 
-	if sslFlag != "none" {
+	if sslFlag != tlsModeNone {
 		if err = result.initializeSSL(sslFlag); err != nil {
 			return nil, err
 		}
@@ -218,6 +284,43 @@ func newConnection(connString string) (*connection, error) {
 	}
 
 	return result, nil
+}
+
+func (v *connection) establishSocketConnection() (net.Conn, error) {
+	// Failover: loop to try all hosts in the list
+	err_msg := ""
+	for i := 0; i < len(v.connHostsList); i++ {
+		host, port, err := net.SplitHostPort(v.connHostsList[i])
+		if err != nil {
+			// no host-port pair identified
+			err_msg += fmt.Sprintf("\n  '%s': %s", v.connHostsList[i], err.Error())
+			continue
+		}
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			// failed to resolve any IPs from host
+			err_msg += fmt.Sprintf("\n  '%s': %s", host, err.Error())
+			continue
+		}
+		r := rand.New(rand.NewSource(time.Now().Unix()))
+		for _, j := range r.Perm(len(ips)) {
+			// j comes from random permutation of indexes - ips[j] will access a random resolved ip
+			addrString := net.JoinHostPort(ips[j].String(), port) // IPv6 returns "[host]:port"
+			conn, err := net.Dial("tcp", addrString)
+			if err != nil {
+				err_msg += fmt.Sprintf("\n  '%s': %s", v.connHostsList[i], err.Error())
+			} else {
+				if len(err_msg) != 0 {
+					connectionLogger.Debug("Failed to establish a connection to %s", err_msg)
+				}
+				connectionLogger.Debug("Established socket connection to %s", addrString)
+				v.connHostsList = v.connHostsList[i:]
+				return conn, err
+			}
+		}
+	}
+	// All of the hosts failed
+	return nil, fmt.Errorf("Failed to establish a connection to the primary server or any backup host.%s", err_msg)
 }
 
 func (v *connection) recvMessage() (msgs.BackEndMsg, error) {
@@ -280,9 +383,16 @@ func (v *connection) sendMessageTo(msg msgs.FrontEndMsg, conn net.Conn) error {
 
 		_, result = conn.Write(sizeBytes)
 
-		if result == nil {
-			if len(msgBytes) > 0 {
-				_, result = conn.Write(msgBytes)
+		if result == nil && len(msgBytes) > 0 {
+			size := 8192 // Max msg size, consistent with how the server works
+			pos := 0
+			var sent int
+			for pos < len(msgBytes) {
+				sent, result = conn.Write(msgBytes[pos:min(pos+size, len(msgBytes))])
+				if result != nil {
+					break
+				}
+				pos += sent
 			}
 		}
 	}
@@ -294,6 +404,13 @@ func (v *connection) sendMessageTo(msg msgs.FrontEndMsg, conn net.Conn) error {
 	}
 
 	return result
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (v *connection) handshake() error {
@@ -308,20 +425,20 @@ func (v *connection) handshake() error {
 		return fmt.Errorf("connection string must have a non-empty user name")
 	}
 
-	if len(v.connURL.Path) <= 1 {
-		return fmt.Errorf("connection string must include a database name")
+	dbName := ""
+	if len(v.connURL.Path) > 1 {
+		dbName = v.connURL.Path[1:]
 	}
-
-	path := v.connURL.Path[1:]
 
 	msg := &msgs.FEStartupMsg{
 		ProtocolVersion: protocolVersion,
 		DriverName:      driverName,
 		DriverVersion:   driverVersion,
 		Username:        userName,
-		Database:        path,
+		Database:        dbName,
 		SessionID:       v.sessionID,
 		ClientPID:       v.clientPID,
+		Autocommit:      v.autocommit,
 	}
 
 	if err := v.sendMessage(msg); err != nil {
@@ -337,7 +454,7 @@ func (v *connection) handshake() error {
 
 		switch msg := bMsg.(type) {
 		case *msgs.BEErrorMsg:
-			return msg.ToErrorType()
+			return errorMsgToVError(msg)
 		case *msgs.BEReadyForQueryMsg:
 			v.transactionState = msg.TransactionState
 			return nil
@@ -494,9 +611,18 @@ func (v *connection) balanceLoad() error {
 	// v.connURL.Hostname() is used by initializeSSL(), so load balancing info should not write into v.connURL
 	loadBalanceAddr := fmt.Sprintf("%s:%d", msg.Host, msg.Port)
 
+	if v.connHostsList[0] == loadBalanceAddr {
+		// Already connecting to the host
+		return nil
+	}
+
+	// Push the new host onto the host list before connecting again.
+	// Note that this leaves the originally-specified host as the first failover possibility
+	v.connHostsList = append([]string{loadBalanceAddr}, v.connHostsList...)
+
 	// Connect to new host
 	v.conn.Close()
-	v.conn, err = net.Dial("tcp", loadBalanceAddr)
+	v.conn, err = v.establishSocketConnection()
 
 	if err != nil {
 		return fmt.Errorf("cannot redirect to %s (%s)", loadBalanceAddr, err.Error())
@@ -525,21 +651,24 @@ func (v *connection) initializeSSL(sslFlag string) error {
 	}
 
 	switch sslFlag {
-	case "server":
+	case tlsModeServer:
 		connectionLogger.Info("enabling SSL/TLS server mode")
 		v.conn = tls.Client(v.conn, &tls.Config{InsecureSkipVerify: true})
-	case "server-strict":
+	case tlsModeServerStrict:
 		connectionLogger.Info("enabling SSL/TLS server strict mode")
 		v.conn = tls.Client(v.conn, &tls.Config{ServerName: v.connURL.Hostname()})
 	default:
-		err := fmt.Errorf("unsupported tlsmode flag: %s - should be 'server', 'server-strict' or 'none'", sslFlag)
-		connectionLogger.Error(err.Error())
-		return err
+		// Custom mode is used for mutual ssl mode
+		connectionLogger.Info("enabling SSL/TLS custom mode")
+		config, ok := tlsConfigs.get(sslFlag)
+		if !ok {
+			err := fmt.Errorf("tls config %s not registered. See 'Using custom TLS config' in the README.md file", sslFlag)
+			connectionLogger.Error(err.Error())
+			return err
+		}
+		v.conn = tls.Client(v.conn, config)
+		return nil
 	}
-	// 	case "mutual":
-	// 		err = fmt.Errorf("mutual ssl mode not currently supported")
-	// 	default:
-	// 		err = fmt.Errorf("unsupported ssl value in connect string: %s", sslFlag)
 
 	return nil
 }

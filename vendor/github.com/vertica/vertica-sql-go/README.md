@@ -1,14 +1,14 @@
 # vertica-sql-go
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](https://opensource.org/licenses/Apache-2.0)
-[![GoDoc](https://godoc.org/github.com/vertica/vertica-sql-go?status.svg)](https://godoc.org/github.com/vertica/vertica-sql-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/vertica/vertica-sql-go.svg)](https://pkg.go.dev/github.com/vertica/vertica-sql-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vertica/vertica-sql-go)](https://goreportcard.com/report/github.com/vertica/vertica-sql-go)
 
 vertica-sql-go is a native Go adapter for the Vertica (http://www.vertica.com) database.
 
 Please check out [release notes](https://github.com/vertica/vertica-sql-go/releases) to learn about the latest improvements.
 
-vertica-sql-go has been tested with Vertica 10.0.1 and Go 1.13/1.14/1.15.
+vertica-sql-go has been tested with Vertica 12.0.2 and Go 1.15/1.16/1.17/1.18/1.19.
 
 ## Installation
 
@@ -75,7 +75,7 @@ Example:
 
 ```bash
 export VERTICA_SQL_GO_LOG_FILE=/var/log/vertica-sql-go.log
-``` 
+```
 
 ### Creating a connection
 
@@ -88,6 +88,7 @@ where *myDBConnectString* is of the form:
 ```Go
 vertica://(user):(password)@(host):(port)/(database)?(queryArgs)
 ```
+If the host is a literal IPv6 address it must be enclosed in square brackets.
 
 Currently supported query arguments are:
 
@@ -100,6 +101,11 @@ Currently supported query arguments are:
 | tlsmode            | the ssl/tls policy for this connection | 'none' (default) = don't use SSL/TLS for this connection |
 |                |                                    | 'server' = server must support SSL/TLS, but skip verification **(INSECURE!)** |
 |                |                                    | 'server-strict' = server must support SSL/TLS |
+|                |                                    | {customName} = use custom registered `tls.Config` (see "Using custom TLS config" section below) |
+| backup_server_node    | a list of backup hosts for the client to try to connect if the primary host is unreachable | a comma-seperated list of backup host-port pairs. E.g.<br> 'host1:port1,host2:port2,host3:port3'  |
+| client_label   | Sets a label for the connection on the server. This value appears in the `client_label` column of the SESSIONS system table. | (default) vertica-sql-go-{version}-{pid}-{timestamp} |
+| autocommit     | Controls whether the connection automatically commits transactions. | 1 = (default) on |
+|                |            | 0 = off
 
 To ping the server and validate a connection (as the connection isn't necessarily created at that moment), simply call the *PingContext()* method.
 
@@ -110,6 +116,39 @@ err = connDB.PingContext(ctx)
 ```
 
 If there is an error in connection, the error result will be non-nil and contain a description of whatever problem occurred.
+
+### Using custom TLS config
+
+Custom TLS config(s) can be registered for TLS / SSL encrypted connection to the server.
+Here is an example of registering and using a `tls.Config`:
+
+```Go
+import vertigo "github.com/vertica/vertica-sql-go"
+
+// Register tls.Config
+rootCertPool := x509.NewCertPool()
+pem, err := ioutil.ReadFile("/certs/ca.crt")
+if err != nil {
+    LOG.Warningln("ERROR: failed reading cert file", err)
+}
+if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
+    LOG.Warningln("ERROR: Failed to append PEM")
+}
+tlsConfig := &tls.Config{RootCAs: rootCertPool, ServerName: host}
+vertigo.RegisterTLSConfig("myCustomName", tlsConfig)
+
+// Connect using tls.Config
+var rawQuery = url.Values{}
+rawQuery.Add("tlsmode", "myCustomName")
+var query = url.URL{
+    Scheme:   "vertica",
+    User:     url.UserPassword(user, password),
+    Host:     fmt.Sprintf("%s:%d", host, port),
+    Path:     databaseName,
+    RawQuery: rawQuery.Encode(),
+}
+sql.Open("vertica", query.String())
+```
 
 ### Performing a simple query
 
@@ -337,7 +376,7 @@ func main() {
 
     // Create a connection to our database. Connection is lazy and won't
     // happen until it's used.
-    connDB, err := sql.Open("vertica", "vertica://dbadmin:@localhost:5433/dbadmin")
+    connDB, err := sql.Open("vertica", "vertica://dbadmin:@localhost:5433/db1?connection_load_balance=1")
 
     if err != nil {
         testLogger.Fatal(err.Error())

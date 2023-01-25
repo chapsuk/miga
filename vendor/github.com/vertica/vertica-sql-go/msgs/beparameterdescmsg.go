@@ -1,6 +1,6 @@
 package msgs
 
-// Copyright (c) 2019 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ func (m *BEParameterDescMsg) CreateFromMsgBody(buf *msgBuffer) (BackEndMsg, erro
 			res.ParameterTypes[i].TypeName = customTypes[typeOIDOrIndex].TypeName
 		} else {
 			res.ParameterTypes[i].TypeOID = typeOIDOrIndex
-			res.ParameterTypes[i].TypeName = common.ColumnTypeString(typeOIDOrIndex)
+			res.ParameterTypes[i].TypeName = common.ColumnTypeString(typeOIDOrIndex, typeModifier)
 		}
 
 		res.ParameterTypes[i].TypeModifier = typeModifier

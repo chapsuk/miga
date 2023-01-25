@@ -1,6 +1,6 @@
 package vertigo
 
-// Copyright (c) 2019-2020 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,10 +34,11 @@ package vertigo
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
-	"encoding/hex"
 	"fmt"
 	"io"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -50,7 +51,7 @@ import (
 )
 
 type rowStore interface {
-	AddRow(msg *msgs.BEDataRowMsg)
+	AddRow(msg *msgs.BEDataRowMsg) error
 	GetRow() *msgs.BEDataRowMsg
 	Peek() *msgs.BEDataRowMsg
 	Close() error
@@ -69,6 +70,7 @@ var (
 	paddingString        = "000000"
 	defaultRowBufferSize = 256
 	rowLogger            = logger.New("row")
+	endsWithHalfHour     = regexp.MustCompile(".*:\\d{2}$")
 )
 
 // Columns returns the names of all of the columns
@@ -124,8 +126,25 @@ func (r *rows) Next(dest []driver.Value) error {
 			dest[idx], err = parseTimestampTZColumn("0000-01-01 " + string(colVal))
 		case common.ColTypeInterval, common.ColTypeIntervalYM: // stays string
 			dest[idx] = string(colVal)
-		case common.ColTypeVarBinary, common.ColTypeLongVarBinary, common.ColTypeBinary: // to []byte - this one's easy
-			dest[idx] = hex.EncodeToString(colVal)
+		case common.ColTypeVarBinary, common.ColTypeLongVarBinary, common.ColTypeBinary:
+			// to []byte; convert escaped octal (e.g. \261) into byte with \\ for \
+			var out []byte
+			for len(colVal) > 0 {
+				c := colVal[0]
+				if c == '\\' {
+					if colVal[1] == '\\' { // escaped \
+						colVal = colVal[2:]
+					} else { // A \xxx octal string
+						x, _ := strconv.ParseInt(string(colVal[1:4]), 8, 32)
+						c = byte(x)
+						colVal = colVal[4:]
+					}
+				} else {
+					colVal = colVal[1:]
+				}
+				out = append(out, c)
+			}
+			dest[idx] = out
 		default:
 			dest[idx] = string(colVal)
 		}
@@ -170,7 +189,6 @@ func parseTimestampTZColumn(fullString string) (driver.Value, error) {
 		fullString = strings.Replace(fullString, " BC", "", -1)
 	}
 
-	endsWithHalfHour, _ := regexp.Compile(".*:\\d{2}$")
 	if !endsWithHalfHour.MatchString(fullString) {
 		fullString = fullString + ":00"
 	}
@@ -194,12 +212,12 @@ func parseTimestampTZColumn(fullString string) (driver.Value, error) {
 	return result, err
 }
 
-func (r *rows) finalize() {
-	r.resultData.Finalize()
+func (r *rows) finalize() error {
+	return r.resultData.Finalize()
 }
 
-func (r *rows) addRow(rowData *msgs.BEDataRowMsg) {
-	r.resultData.AddRow(rowData)
+func (r *rows) addRow(rowData *msgs.BEDataRowMsg) error {
+	return r.resultData.AddRow(rowData)
 }
 
 func newRows(ctx context.Context, columnsDefsMsg *msgs.BERowDescMsg, tzOffset string) *rows {
@@ -304,6 +322,28 @@ func (r *rows) ColumnTypeLength(index int) (length int64, ok bool) {
 		return (precision/19 + 1) * 8, true
 	default:
 		return 0, false
+	}
+}
+
+// Returns the value type that can be used to scan types into.
+// Interface: driver.RowsColumnTypeScanType
+func (r *rows) ColumnTypeScanType(index int) reflect.Type {
+	switch r.columnDefs.Columns[index].DataTypeOID {
+	case common.ColTypeBoolean:
+		return reflect.TypeOf(sql.NullBool{})
+	case common.ColTypeInt64:
+		return reflect.TypeOf(sql.NullInt64{})
+	case common.ColTypeFloat64, common.ColTypeNumeric:
+		return reflect.TypeOf(sql.NullFloat64{})
+	case common.ColTypeVarChar, common.ColTypeLongVarChar, common.ColTypeChar,
+		common.ColTypeVarBinary, common.ColTypeLongVarBinary, common.ColTypeBinary,
+		common.ColTypeUUID, common.ColTypeInterval, common.ColTypeIntervalYM:
+		return reflect.TypeOf(sql.NullString{})
+	case common.ColTypeDate, common.ColTypeTimestamp, common.ColTypeTimestampTZ,
+		common.ColTypeTime, common.ColTypeTimeTZ:
+		return reflect.TypeOf(sql.NullTime{})
+	default:
+		return reflect.TypeOf(new(interface{}))
 	}
 }
 

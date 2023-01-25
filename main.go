@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/urfave/cli.v2"
 
-	_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/vertica/vertica-sql-go"

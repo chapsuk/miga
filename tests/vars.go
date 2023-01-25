@@ -29,7 +29,7 @@ var (
 	dsns = map[string]dsn{
 		"postgres":   "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable",
 		"mysql":      "user:password@tcp(127.0.0.1:3306)/miga",
-		"clickhouse": "tcp://127.0.0.1:9000?username=user&password=password&database=miga",
+		"clickhouse": "tcp://user:password@127.0.0.1:9000/miga",
 		"vertica":    "vertica://dbadmin:@127.0.0.1:5433/docker",
 	}
 )
