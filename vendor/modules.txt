@@ -210,6 +210,6 @@ gopkg.in/yaml.v2
 # howett.net/plist v1.0.0
 ## explicit; go 1.12
 howett.net/plist
-# mellium.im/sasl v0.2.1
-## explicit
+# mellium.im/sasl v0.3.1
+## explicit; go 1.18
 mellium.im/sasl
