@@ -17,7 +17,7 @@ Aimed to add extra features and hide some limitations of existing golang migrati
 
 PackageName | Version | Postgres            | MySQL    | Clickhouse | Vertica
 ----------- | ------- | ------------------- | -------- | ---------- | ----
-[goose](https://github.com/pressly/goose)       |  2.7.0 ([patches](https://github.com/pressly/goose/compare/v2.7.0...chapsuk:master?expand=1))  |  :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
+[goose](https://github.com/pressly/goose)       |  3.9.1 ([commit](https://github.com/pressly/goose/commit/ad906520422008360de7c76e1698f6e0a6e4a918))  |  :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:
 [migrate](https://github.com/golang-migrate/migrate)     |  4.2.5  |  :heavy_check_mark: | :heavy_check_mark: | |
 [impg](https://github.com/im-kulikov/migrate)        |   0.1   |  :heavy_check_mark: | | |
 

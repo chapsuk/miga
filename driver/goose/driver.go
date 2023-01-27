@@ -6,7 +6,7 @@ import (
 
 	"miga/utils"
 
-	orig "github.com/pressly/goose"
+	orig "github.com/pressly/goose/v3"
 )
 
 type Goose struct {

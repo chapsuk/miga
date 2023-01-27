@@ -1,6 +1,6 @@
 package msgs
 
-// Copyright (c) 2019 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -99,19 +99,19 @@ func (m *BERowDescMsg) CreateFromMsgBody(buf *msgBuffer) (BackEndMsg, error) {
 		isUserType := buf.readBool()
 		dataTypeID := buf.readUint32()
 
-		if isUserType {
-			col.DataTypeOID = userTypes[dataTypeID].BaseTypeOID
-			col.DataTypeName = userTypes[dataTypeID].DataTypeName
-		} else {
-			col.DataTypeOID = dataTypeID
-			col.DataTypeName = common.ColumnTypeString(dataTypeID)
-		}
-
 		col.Length = buf.readInt16()
 		col.Nullable = buf.readInt16() == 1
 		col.IsIdentity = buf.readInt16() == 1
 		col.DataTypeMod = buf.readInt32()
 		col.FormatCode = buf.readUint16()
+
+		if isUserType {
+			col.DataTypeOID = userTypes[dataTypeID].BaseTypeOID
+			col.DataTypeName = userTypes[dataTypeID].DataTypeName
+		} else {
+			col.DataTypeOID = dataTypeID
+			col.DataTypeName = common.ColumnTypeString(dataTypeID, col.DataTypeMod)
+		}
 
 		res.Columns[i] = col
 	}

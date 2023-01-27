@@ -9,7 +9,7 @@ import (
 
 	"miga/driver"
 
-	_ "github.com/ClickHouse/clickhouse-go"
+	_ "github.com/ClickHouse/clickhouse-go/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	_ "github.com/vertica/vertica-sql-go"
 )
