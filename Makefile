@@ -26,7 +26,7 @@ release: docker_build
 .PHONY: test
 test:
 	go clean -testcache
-	go test -mod=vendor -v -race ./...
+	go test -v -race ./...
 
 .PHONY: db_up
 db_up: postgres_up mysql_up clickhouse_up vertica_up
@@ -67,14 +67,7 @@ clickhouse_down:
 
 .PHONY: clickhouse_up
 clickhouse_up: clickhouse_down
-	docker run -d \
-		-p 8123:8123 \
-		-p 9000:9000 \
-		-e CLICKHOUSE_DB=miga \
-		-e CLICKHOUSE_USER=user \
-		-e CLICKHOUSE_PASSWORD=password \
-		--name=$(CLICKHOUSE_CONTAINER_NAME) \
-		--ulimit nofile=262144:262144 yandex/clickhouse-server
+	docker-compose up -d
 
 .PHONY: vertica_down
 vertica_down:
