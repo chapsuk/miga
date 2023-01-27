@@ -1,5 +1,5 @@
 NAME = miga
-VERSION ?= v0.11.1
+VERSION ?= 0.11.2
 PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 CLICKHOUSE_CONTAINER_NAME = miga-clickhouse
