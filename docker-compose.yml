@@ -1,0 +1,47 @@
+version: '3.9'
+
+services:
+
+  clickhouse0:
+    image: yandex/clickhouse-server
+    container_name: clickhouse0
+    volumes:
+      - ./tests/clickhouse/macros.xml:/etc/clickhouse-server/conf.d/macros.xml
+      - ./tests/clickhouse/zookeeper.xml:/etc/clickhouse-server/conf.d/zookeeper.xml
+      - ./tests/clickhouse/remote_servers.xml:/etc/clickhouse-server/config.d/remote_servers.xml
+    ports:
+      - 8123:8123
+      - 9000:9000
+    environment:
+      CLICKHOUSE_DB: miga
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: password
+      REPLICA_NAME: clickhouse0
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  clickhouse1:
+    image: yandex/clickhouse-server
+    container_name: clickhouse1
+    volumes:
+      - ./tests/clickhouse/macros.xml:/etc/clickhouse-server/conf.d/macros.xml
+      - ./tests/clickhouse/zookeeper.xml:/etc/clickhouse-server/conf.d/zookeeper.xml
+      - ./tests/clickhouse/remote_servers.xml:/etc/clickhouse-server/config.d/remote_servers.xml
+    environment:
+      CLICKHOUSE_DB: miga
+      CLICKHOUSE_USER: user
+      CLICKHOUSE_PASSWORD: password
+      REPLICA_NAME: clickhouse1
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    hostname: zookeeper

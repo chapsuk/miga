@@ -131,12 +131,6 @@ func fillDBConfig(cfg *driver.Config) {
 	if viper.IsSet("clickhouse.dsn") {
 		cfg.Dialect = "clickhouse"
 		cfg.Dsn = viper.GetString("clickhouse.dsn")
-		if viper.IsSet("clickhouse.cluster") {
-			cfg.ClickhouseClusterName = viper.GetString("clickhouse.cluster")
-			cfg.ClickhouseEngine = viper.GetString("clickhouse.engine")
-			cfg.ClickhouseSchema = viper.GetString("clickhouse.schema")
-			cfg.ClickhouseSharded = viper.GetBool("clickhouse.sharded")
-		}
 		return
 	}
 

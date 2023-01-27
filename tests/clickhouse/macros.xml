@@ -1,0 +1,9 @@
+<yandex>
+    <macros>
+        <installation>chapsuk</installation>
+        <all-sharded-shard>0</all-sharded-shard>
+        <cluster>miga</cluster>
+        <shard>0</shard>
+        <replica from_env="REPLICA_NAME" />
+    </macros>
+</yandex>

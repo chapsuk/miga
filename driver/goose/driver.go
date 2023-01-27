@@ -9,21 +9,13 @@ import (
 )
 
 type Goose struct {
-	db                    *sql.DB
-	dir                   string
-	dialect               string
-	versionTableName      string
-	clickhouseSchema      string
-	clickhouseClusterName string
-	clickhouseEngine      string
-	clickhouseSharded     bool
+	db               *sql.DB
+	dir              string
+	dialect          string
+	versionTableName string
 }
 
-func New(
-	dialect, dsn, tableName, dir string,
-	clickhouseSchema, clickhouseClusterName, clickhouseEngine string,
-	clickhouseSharded bool,
-) (*Goose, error) {
+func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	err := orig.SetDialect(dialect)
 	if err != nil {
 		return nil, err
@@ -32,25 +24,21 @@ func New(
 	orig.SetTableName(tableName)
 	orig.SetLogger(&utils.StdLogger{})
 
+	if dialect == "clickhouse-replicated" {
+		dialect = "clickhouse"
+	}
+
 	db, err := sql.Open(dialect, dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Goose{
-		db:                    db,
-		dir:                   dir,
-		dialect:               dialect,
-		versionTableName:      tableName,
-		clickhouseSchema:      clickhouseSchema,
-		clickhouseClusterName: clickhouseClusterName,
-		clickhouseEngine:      clickhouseEngine,
-		clickhouseSharded:     clickhouseSharded,
+		db:               db,
+		dir:              dir,
+		dialect:          dialect,
+		versionTableName: tableName,
 	}, nil
-}
-
-func (g Goose) isClickhouse() bool {
-	return g.dialect == "clickhouse"
 }
 
 func (g Goose) Close() error {

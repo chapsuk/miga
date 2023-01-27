@@ -39,6 +39,10 @@ func SetDialect(d string) error {
 		dialect = &TiDBDialect{}
 	case "clickhouse":
 		dialect = &ClickHouseDialect{}
+	case "clickhouse-replicated":
+		dialect = &ClickHouseReplicatedDialect{
+			ClusterName: "{cluster}",
+		}
 	case "vertica":
 		dialect = &VerticaDialect{}
 	default:
@@ -322,6 +326,42 @@ func (m ClickHouseDialect) migrationSQL() string {
 }
 
 func (m ClickHouseDialect) deleteVersionSQL() string {
+	return fmt.Sprintf("ALTER TABLE %s DELETE WHERE version_id = $1 SETTINGS mutations_sync = 2", TableName())
+}
+
+// ClickHouseReplicatedDialect struct.
+type ClickHouseReplicatedDialect struct {
+	ClusterName string
+}
+
+func (m ClickHouseReplicatedDialect) createVersionTableSQL() string {
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s ON CLUSTER '%s' (
+      version_id Int64,
+      is_applied UInt8,
+      date Date default now(),
+      tstamp DateTime default now()
+    )
+	ENGINE = ReplicatedMergeTree()
+	  ORDER BY (date)`, TableName(), m.ClusterName)
+}
+
+func (m ClickHouseReplicatedDialect) dbVersionQuery(db *sql.DB) (*sql.Rows, error) {
+	rows, err := db.Query(fmt.Sprintf("SELECT version_id, is_applied FROM %s ORDER BY version_id DESC", TableName()))
+	if err != nil {
+		return nil, err
+	}
+	return rows, err
+}
+
+func (m ClickHouseReplicatedDialect) insertVersionSQL() string {
+	return fmt.Sprintf("INSERT INTO %s (version_id, is_applied) VALUES ($1, $2)", TableName())
+}
+
+func (m ClickHouseReplicatedDialect) migrationSQL() string {
+	return fmt.Sprintf("SELECT tstamp, is_applied FROM %s WHERE version_id = $1 ORDER BY tstamp DESC LIMIT 1", TableName())
+}
+
+func (m ClickHouseReplicatedDialect) deleteVersionSQL() string {
 	return fmt.Sprintf("ALTER TABLE %s DELETE WHERE version_id = $1 SETTINGS mutations_sync = 2", TableName())
 }
 
