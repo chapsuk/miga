@@ -82,6 +82,9 @@ var migrationCases = []testCase{
 			So(count, ShouldEqual, 0)
 			So(r.Err(), ShouldBeNil)
 		},
+		Condition: func(driverName, dialect string) bool {
+			return dialect != "clickhouse-replicated"
+		},
 	},
 	{
 		Description: "#5 query with `;`",
