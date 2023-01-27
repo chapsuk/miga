@@ -3,7 +3,7 @@ CREATE TABLE users_replicated ON CLUSTER '{cluster}' (
     id BIGINT,
     name VARCHAR(128),
     migastas BIGINT DEFAULT 0
-) engine=MergeTree() order by id;
+) engine=ReplicatedMergeTree() order by id;
 
 -- +goose Down
-DROP TABLE IF EXISTS users_replicated ON CLUSTER '{cluster}';
+DROP TABLE IF EXISTS users_replicated ON CLUSTER '{cluster}' SYNC;

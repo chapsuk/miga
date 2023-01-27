@@ -2,7 +2,6 @@ package goose
 
 import (
 	"database/sql"
-
 	"miga/utils"
 
 	orig "github.com/pressly/goose/v3"
