@@ -10,7 +10,6 @@ import (
 type Goose struct {
 	db               *sql.DB
 	dir              string
-	dialect          string
 	versionTableName string
 }
 
@@ -23,11 +22,12 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	orig.SetTableName(tableName)
 	orig.SetLogger(&utils.StdLogger{})
 
+	driverName := dialect
 	if dialect == "clickhouse-replicated" {
-		dialect = "clickhouse"
+		driverName = "clickhouse"
 	}
 
-	db, err := sql.Open(dialect, dsn)
+	db, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,6 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	return &Goose{
 		db:               db,
 		dir:              dir,
-		dialect:          dialect,
 		versionTableName: tableName,
 	}, nil
 }

@@ -134,6 +134,12 @@ func fillDBConfig(cfg *driver.Config) {
 		return
 	}
 
+	if viper.IsSet("clickhouse_replicated.dsn") {
+		cfg.Dialect = "clickhouse-replicated"
+		cfg.Dsn = viper.GetString("clickhouse_replicated.dsn")
+		return
+	}
+
 	if viper.IsSet("vertica.dsn") {
 		cfg.Dialect = "vertica"
 		cfg.Dsn = viper.GetString("vertica.dsn")
