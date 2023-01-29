@@ -88,61 +88,48 @@ func fillDBConfig(cfg *driver.Config) {
 		return
 	}
 
-	if viper.IsSet("postgres.dsn") || viper.IsSet("postgres.host") {
-		cfg.Dialect = "postgres"
-		dsn := viper.GetString("postgres.dsn")
-		if dsn == "" {
-			var addr string
-			if viper.IsSet("postgres.host") {
-				port := viper.GetInt("postgres.port")
-				if port == 0 {
-					port = 5432
-				}
-				addr = fmt.Sprintf("%s:%d", viper.GetString("postgres.host"), port)
-			}
+	// Allow single config for many databases
+	if viper.IsSet("active_dialect") {
+		cfg.Dialect = viper.GetString("active_dialect")
+		cfg.Dsn = viper.GetString(cfg.Dialect + ".dsn")
+		return
+	}
 
-			if viper.GetString("postgres.address") != "" {
-				addr = viper.GetString("postgres.address")
-			}
-
-			db := viper.GetString("postgres.db")
-			if viper.IsSet("postgres.database") {
-				db = viper.GetString("postgres.database")
-			}
-
-			dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?%s",
-				viper.GetString("postgres.user"),
-				viper.GetString("postgres.password"),
-				addr,
-				db,
-				viper.GetString("postgres.options"),
-			)
+	for _, dialect := range []string{"postgres", "mysql", "clickhouse", "clickhouse_replicated", "vertica"} {
+		if viper.IsSet(dialect + ".dsn") {
+			cfg.Dialect = dialect
+			cfg.Dsn = viper.GetString(cfg.Dialect + ".dsn")
+			return
 		}
-		cfg.Dsn = dsn
-		return
 	}
 
-	if viper.IsSet("mysql.dsn") {
-		cfg.Dialect = "mysql"
-		cfg.Dsn = viper.GetString("mysql.dsn")
-		return
-	}
+	if viper.IsSet("postgres.host") {
+		cfg.Dialect = "postgres"
+		var addr string
+		if viper.IsSet("postgres.host") {
+			port := viper.GetInt("postgres.port")
+			if port == 0 {
+				port = 5432
+			}
+			addr = fmt.Sprintf("%s:%d", viper.GetString("postgres.host"), port)
+		}
 
-	if viper.IsSet("clickhouse.dsn") {
-		cfg.Dialect = "clickhouse"
-		cfg.Dsn = viper.GetString("clickhouse.dsn")
-		return
-	}
+		if viper.GetString("postgres.address") != "" {
+			addr = viper.GetString("postgres.address")
+		}
 
-	if viper.IsSet("clickhouse_replicated.dsn") {
-		cfg.Dialect = "clickhouse-replicated"
-		cfg.Dsn = viper.GetString("clickhouse_replicated.dsn")
-		return
-	}
+		db := viper.GetString("postgres.db")
+		if viper.IsSet("postgres.database") {
+			db = viper.GetString("postgres.database")
+		}
 
-	if viper.IsSet("vertica.dsn") {
-		cfg.Dialect = "vertica"
-		cfg.Dsn = viper.GetString("vertica.dsn")
+		cfg.Dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?%s",
+			viper.GetString("postgres.user"),
+			viper.GetString("postgres.password"),
+			addr,
+			db,
+			viper.GetString("postgres.options"),
+		)
 		return
 	}
 }
