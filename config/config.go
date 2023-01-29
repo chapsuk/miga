@@ -89,8 +89,8 @@ func fillDBConfig(cfg *driver.Config) {
 	}
 
 	// Allow single config for many databases
-	if viper.IsSet("active_dialect") {
-		cfg.Dialect = viper.GetString("active_dialect")
+	if viper.IsSet("dialect") {
+		cfg.Dialect = viper.GetString("dialect")
 		cfg.Dsn = viper.GetString(cfg.Dialect + ".dsn")
 		return
 	}
