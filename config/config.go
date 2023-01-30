@@ -91,7 +91,11 @@ func fillDBConfig(cfg *driver.Config) {
 	// Allow single config for many databases
 	if viper.IsSet("dialect") {
 		cfg.Dialect = viper.GetString("dialect")
-		cfg.Dsn = viper.GetString(cfg.Dialect + ".dsn")
+		if cfg.Dialect == "clickhouse-replicated" {
+			cfg.Dsn = viper.GetString("clickhouse.dsn")
+		} else {
+			cfg.Dsn = viper.GetString(cfg.Dialect + ".dsn")
+		}
 		return
 	}
 
