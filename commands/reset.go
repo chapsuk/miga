@@ -38,7 +38,7 @@ func Reset(driver func() driver.Interface) *cobra.Command {
 			logger.G().Info("ok")
 
 			if err := driver().Reset(); err != nil {
-				logger.G().Errorf("reset: %s", err)
+				logger.G().Fatalf("reset: %s", err)
 			}
 		},
 	}

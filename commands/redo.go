@@ -14,7 +14,7 @@ func Redo(driver func() driver.Interface) *cobra.Command {
 		Short: "redo cmd",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := driver().Redo(); err != nil {
-				logger.G().Errorf("redo: %s", err)
+				logger.G().Fatalf("redo: %s", err)
 			}
 		},
 	}

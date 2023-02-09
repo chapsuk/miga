@@ -14,7 +14,7 @@ func Version(driver func() driver.Interface) *cobra.Command {
 		Short: "get current db version",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := driver().Version(); err != nil {
-				logger.G().Errorf("get version: %s", err)
+				logger.G().Fatalf("get version: %s", err)
 			}
 		},
 	}

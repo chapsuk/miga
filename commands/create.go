@@ -24,7 +24,7 @@ func Create(driver func() driver.Interface) *cobra.Command {
 			}
 
 			if err := driver().Create(name, ext); err != nil {
-				logger.G().Errorf("create: %s", err)
+				logger.G().Fatalf("create: %s", err)
 			}
 		},
 	}

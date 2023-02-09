@@ -14,7 +14,7 @@ func Down(driver func() driver.Interface) *cobra.Command {
 		Short: "down last migration",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := driver().Down(); err != nil {
-				logger.G().Errorf("down: %s", err)
+				logger.G().Fatalf("down: %s", err)
 			}
 		},
 	}
@@ -31,7 +31,7 @@ func DownTo(driver func() driver.Interface) *cobra.Command {
 			}
 			version := args[0]
 			if err := driver().DownTo(version); err != nil {
-				logger.G().Errorf("down: %s", err)
+				logger.G().Fatalf("down: %s", err)
 			}
 		},
 	}

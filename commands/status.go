@@ -14,7 +14,7 @@ func Status(driver func() driver.Interface) *cobra.Command {
 		Short: "returns current db status",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := driver().Status(); err != nil {
-				logger.G().Errorf("status: %s", err)
+				logger.G().Fatalf("status: %s", err)
 			}
 		},
 	}

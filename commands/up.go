@@ -14,7 +14,7 @@ func Up(driver func() driver.Interface) *cobra.Command {
 		Short: "up db to latest version",
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := driver().Up(); err != nil {
-				logger.G().Errorf("get version: %s", err)
+				logger.G().Fatalf("get version: %s", err)
 			}
 		},
 	}
@@ -31,7 +31,7 @@ func UpTo(driver func() driver.Interface) *cobra.Command {
 			}
 			version := args[0]
 			if err := driver().UpTo(version); err != nil {
-				logger.G().Errorf("get version: %s", err)
+				logger.G().Fatalf("get version: %s", err)
 			}
 		},
 	}
