@@ -52,7 +52,6 @@ func main() {
 			if err != nil {
 				logger.G().Fatal("Create driver: %s", err)
 			}
-			log.Printf("D: %v", migrationDriver)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			logger.G().Info("Root command")

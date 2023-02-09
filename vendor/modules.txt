@@ -207,8 +207,6 @@ golang.org/x/sys/windows/registry
 ## explicit; go 1.17
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
-## explicit
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
