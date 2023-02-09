@@ -2,11 +2,20 @@ package commands
 
 import (
 	"miga/driver"
+	"miga/logger"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/spf13/cobra"
 )
 
 // Version print current db version
-func Version(ctx *cli.Context, d driver.Interface) error {
-	return d.Version()
+func Version(driver func() driver.Interface) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "get current db version",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := driver().Version(); err != nil {
+				logger.G().Errorf("get version: %s", err)
+			}
+		},
+	}
 }

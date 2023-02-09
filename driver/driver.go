@@ -3,6 +3,7 @@ package driver
 import (
 	"errors"
 
+	"miga/config"
 	"miga/driver/goose"
 	"miga/driver/impg"
 	"miga/driver/migrate"
@@ -26,20 +27,6 @@ func Available(name string) bool {
 }
 
 type (
-	Config struct {
-		Name             string
-		Dialect          string
-		Dsn              string
-		Dir              string
-		VersionTableName string
-		Enabled          bool
-
-		ClickhouseSchema      string
-		ClickhouseClusterName string
-		ClickhouseEngine      string
-		ClickhouseSharded     bool
-	}
-
 	Interface interface {
 		Create(name, ext string) error
 		Close() error
@@ -54,34 +41,30 @@ type (
 	}
 )
 
-func New(cfg *Config) (Interface, error) {
-	switch cfg.Name {
+func New(cfg *config.Config) (Interface, error) {
+	switch cfg.Miga.Driver {
 	case Goose:
 		return goose.New(
-			cfg.Dialect,
-			cfg.Dsn,
-			cfg.VersionTableName,
-			cfg.Dir,
+			cfg.Database.Dialect,
+			cfg.Database.DSN,
+			cfg.Miga.TableName,
+			cfg.Miga.Path,
 		)
 	case Migrate:
 		return migrate.New(
-			cfg.Dialect,
-			cfg.Dsn,
-			cfg.VersionTableName,
-			cfg.Dir,
+			cfg.Database.Dialect,
+			cfg.Database.DSN,
+			cfg.Miga.TableName,
+			cfg.Miga.Path,
 		)
 	case Impg:
 		return impg.New(
-			cfg.Dialect,
-			cfg.Dsn,
-			cfg.VersionTableName,
-			cfg.Dir,
+			cfg.Database.Dialect,
+			cfg.Database.DSN,
+			cfg.Miga.TableName,
+			cfg.Miga.Path,
 		)
 	default:
 		return nil, errors.New("unsupported migrations driver")
 	}
-}
-
-func (c *Config) HasDBConfig() bool {
-	return c.Dsn != "" && c.Dialect != ""
 }

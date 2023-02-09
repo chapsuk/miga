@@ -1,22 +1,12 @@
-driver: goose
-
-postgres:
-  # dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
-  user: user
-  password: password
-  host: 127.0.0.1
-  port: 5432
-  database: miga
-  # db: miga # deprecated
-  options: sslmode=disable
-
-# mysql:
-#   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
-
-migrate:
+miga:
+  driver: goose
   path: ./tests/migrations/goose
-  table_name: db_version
+  table: db_version
 
-seed:
-  path: ./tests/seeds/goose
-  table_name: seed_version
+logger:
+  level: info
+  format: console
+
+db:
+  dialect: mysql
+  dsn: "user:password@tcp(127.0.0.1:3306)/miga"

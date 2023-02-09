@@ -1,15 +1,14 @@
 package main
 
 import (
-	"os"
+	"log"
 
-	"miga/commands/all"
-	"miga/commands/migrate"
-	"miga/commands/seed"
+	"miga/commands"
 	"miga/config"
+	"miga/driver"
 	"miga/logger"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/spf13/cobra"
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/go-sql-driver/mysql"
@@ -23,57 +22,57 @@ var (
 )
 
 func main() {
-	app := cli.App{
-		Name:    Name,
-		Version: Version,
-		Usage:   "Single CLI for several packages of migration ",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "config",
-				Value:   "",
-				Usage:   "Config file name",
-				EnvVars: []string{"MIGA_CONFIG"},
-			},
-			&cli.StringFlag{
-				Name:    "driver",
-				Value:   "",
-				Usage:   "Migration driver name: goose, migrate",
-				EnvVars: []string{"MIGA_DRIVER"},
-			},
-			&cli.StringFlag{
-				Name:    "log.level",
-				Value:   "debug",
-				Usage:   "Logger level [debug|info|...]",
-				EnvVars: []string{"MIGA_LOG_LEVEL"},
-			},
-			&cli.StringFlag{
-				Name:    "log.format",
-				Value:   "console",
-				Usage:   "Logger output format console|json",
-				EnvVars: []string{"MIGA_LOG_FORMAT"},
-			},
-		},
-		Before: func(ctx *cli.Context) error {
-			err := logger.Init(
-				ctx.App.Name,
-				ctx.App.Version,
-				ctx.String("log.level"),
-				ctx.String("log.format"),
-			)
+	var (
+		configFile      string
+		migrationDriver driver.Interface
+		driverGet       = func() driver.Interface {
+			return migrationDriver
+		}
+		cfg    *config.Config
+		cfgGet = func() *config.Config {
+			return cfg
+		}
+		err error
+	)
+
+	rootCmd := &cobra.Command{
+		Use:   "miga",
+		Short: "miga is database migration tool",
+		Long:  "miga is database migration tool",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cfg, err = config.NewConfig(configFile)
 			if err != nil {
-				panic("Init logger error: " + err.Error())
+				panic(err)
+			}
+			if err = logger.Init(Name, Version, cfg.Logger.Level, cfg.Logger.Format); err != nil {
+				panic(err)
 			}
 
-			return config.Init(ctx.App.Name, ctx.String("config"), ctx.String("driver"))
+			migrationDriver, err = driver.New(cfg)
+			if err != nil {
+				logger.G().Fatal("Create driver: %s", err)
+			}
+			log.Printf("D: %v", migrationDriver)
 		},
-		Commands: []*cli.Command{
-			all.Command(),
-			migrate.Command(),
-			seed.Command(),
+		Run: func(cmd *cobra.Command, args []string) {
+			logger.G().Info("Root command")
 		},
 	}
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "miga.yml", "config file path")
+	rootCmd.MarkPersistentFlagRequired("config")
 
-	if err := app.Run(os.Args); err != nil {
-		logger.G().Fatal(err)
+	rootCmd.AddCommand(commands.Version(driverGet))
+	rootCmd.AddCommand(commands.Up(driverGet))
+	rootCmd.AddCommand(commands.UpTo(driverGet))
+	rootCmd.AddCommand(commands.Convert(cfgGet))
+	rootCmd.AddCommand(commands.Create(driverGet))
+	rootCmd.AddCommand(commands.Down(driverGet))
+	rootCmd.AddCommand(commands.DownTo(driverGet))
+	rootCmd.AddCommand(commands.Redo(driverGet))
+	rootCmd.AddCommand(commands.Reset(driverGet))
+	rootCmd.AddCommand(commands.Status(driverGet))
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Printf("error: %s", err)
 	}
 }

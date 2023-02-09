@@ -1,27 +1,31 @@
 package commands
 
 import (
-	"errors"
-
 	"miga/driver"
+	"miga/logger"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/spf13/cobra"
 )
 
 // Create migrations files with given name and extension
-func Create(ctx *cli.Context, d driver.Interface) error {
-	name := ctx.Args().Get(0)
-	if len(name) == 0 {
-		return errors.New("NAME required")
-	}
+func Create(driver func() driver.Interface) *cobra.Command {
+	return &cobra.Command{
+		Use:   "create",
+		Short: "create migration file",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) < 1 || len(args[0]) == 0 {
+				logger.G().Fatalf("File name required")
+			}
+			name := args[0]
 
-	ext := ctx.Args().Get(1)
-	switch ext {
-	case "sql":
-	case "go":
-	default:
-		ext = "sql"
-	}
+			ext := "sql"
+			if len(args) == 2 {
+				ext = args[1]
+			}
 
-	return d.Create(name, ext)
+			if err := driver().Create(name, ext); err != nil {
+				logger.G().Errorf("create: %s", err)
+			}
+		},
+	}
 }
