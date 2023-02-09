@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"miga/config"
 	"miga/driver"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -24,11 +25,15 @@ func TestCreateCommand(t *testing.T) {
 		for driverName, dialects := range drivers {
 			for _, dialect := range dialects {
 				Convey(fmt.Sprintf("%s driver %s dialect", driverName, dialect), func() {
-					cfg := &driver.Config{
-						Name:             string(driverName),
-						Dialect:          dialect,
-						Dir:              dir,
-						VersionTableName: string(driverName) + "_db_version",
+					cfg := &config.Config{
+						Miga: config.MigaConfig{
+							Driver:    string(driverName),
+							Path:      dir,
+							TableName: string(driverName) + "_db_version",
+						},
+						Database: config.DatabaseConfig{
+							Dialect: dialect,
+						},
 					}
 
 					driverInst, err := driver.New(cfg)

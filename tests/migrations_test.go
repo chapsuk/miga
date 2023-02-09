@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"miga/config"
 	"miga/driver"
 
 	_ "github.com/ClickHouse/clickhouse-go/v2"
@@ -297,12 +298,16 @@ func TestMigrations(t *testing.T) {
 					tableSuffix = "_replicated"
 				}
 
-				driverInst, err := driver.New(&driver.Config{
-					Name:             string(driverName),
-					Dialect:          dialect,
-					Dsn:              string(dsns[dialect]),
-					Dir:              dir,
-					VersionTableName: tableName,
+				driverInst, err := driver.New(&config.Config{
+					Miga: config.MigaConfig{
+						Driver:    string(driverName),
+						Path:      dir,
+						TableName: tableName,
+					},
+					Database: config.DatabaseConfig{
+						DSN:     string(dsns[dialect]),
+						Dialect: dialect,
+					},
 				})
 				So(err, ShouldBeNil)
 				defer driverInst.Close()

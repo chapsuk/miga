@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"miga/config"
 	"miga/converter"
 	"miga/driver"
 
@@ -48,12 +49,16 @@ func TestConvert(t *testing.T) {
 					)
 
 					Convey(desc, func() {
-						driverInst, err := driver.New(&driver.Config{
-							Name:             string(driverName),
-							Dialect:          dialect,
-							Dsn:              string(dsns[dialect]),
-							Dir:              tdir,
-							VersionTableName: string(driverName) + "_db_version",
+						driverInst, err := driver.New(&config.Config{
+							Miga: config.MigaConfig{
+								Driver:    string(driverName),
+								TableName: string(driverName) + "_db_version",
+								Path:      tdir,
+							},
+							Database: config.DatabaseConfig{
+								DSN:     string(dsns[dialect]),
+								Dialect: dialect,
+							},
 						})
 						So(err, ShouldBeNil)
 						defer driverInst.Close()

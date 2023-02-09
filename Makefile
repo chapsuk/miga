@@ -29,7 +29,7 @@ test:
 	go test -v -race ./...
 
 .PHONY: db_up
-db_up: postgres_up mysql_up clickhouse_up vertica_up
+db_up: vertica_up postgres_up mysql_up clickhouse_up
 
 .PHONY: db_down
 db_down: postgres_down mysql_down clickhouse_down vertica_down

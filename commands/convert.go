@@ -1,38 +1,45 @@
 package commands
 
 import (
-	"errors"
-	"fmt"
-
+	"miga/config"
 	"miga/converter"
 	"miga/driver"
+	"miga/logger"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/spf13/cobra"
 )
 
-func Convert(ctx *cli.Context, cfg *driver.Config) error {
-	from := ctx.Args().Get(0)
-	if len(from) == 0 {
-		return errors.New("FROM_FORAMT required")
-	}
+func Convert(cfg func() *config.Config) *cobra.Command {
+	return &cobra.Command{
+		Use:   "convert",
+		Short: "convert between drivers format",
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) < 3 {
+				logger.G().Fatalf("The up-to version is not defined")
+			}
+			from := args[0]
+			if len(from) == 0 {
+				logger.G().Fatal("FROM_FORAMT required")
+			}
+			to := args[1]
+			if len(to) == 0 {
+				logger.G().Fatal("TO_FORAMT required")
+			}
+			dest := args[2]
+			if len(dest) == 0 {
+				logger.G().Fatal("DESTENITION_PATH required")
+			}
 
-	to := ctx.Args().Get(1)
-	if len(to) == 0 {
-		return errors.New("TO_FORAMT required")
-	}
+			if !driver.Available(from) {
+				logger.G().Fatalf("unsupported FROM_FORMAT: %s", from)
+			}
+			if !driver.Available(to) {
+				logger.G().Fatalf("unsupported TO_FORMAT: %s", from)
+			}
 
-	dest := ctx.Args().Get(2)
-	if len(dest) == 0 {
-		return errors.New("DESTENITION_PATH required")
+			if err := converter.Convert(from, to, cfg().Miga.Path, dest); err != nil {
+				logger.G().Fatalf("converter: %s", err)
+			}
+		},
 	}
-
-	if !driver.Available(from) {
-		return fmt.Errorf("unsupported FROM_FORMAT: %s", from)
-	}
-
-	if !driver.Available(to) {
-		return fmt.Errorf("unsupported TO_FORMAT: %s", from)
-	}
-
-	return converter.Convert(from, to, cfg.Dir, dest)
 }

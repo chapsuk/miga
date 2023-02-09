@@ -1,82 +1,32 @@
 package tests
 
 import (
-	"flag"
-	"fmt"
-	"os"
 	"testing"
 
-	"miga/commands"
 	"miga/config"
-	"miga/driver"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"gopkg.in/urfave/cli.v2"
 )
 
 func TestConfig(t *testing.T) {
-	Convey("Initialized default config", t, func() {
-		err := config.Init("", "", "")
+	Convey("Initialized config", t, func() {
+		cfg, err := config.NewConfig("./../miga.yml")
 		So(err, ShouldBeNil)
 
-		migCfg := config.MigrateDriverConfig()
-		sedCfg := config.SeedDriverConfig()
-
-		Convey("Default driver goose", func() {
-			So(migCfg.Name, ShouldEqual, "goose")
-			So(sedCfg.Name, ShouldEqual, "goose")
+		Convey("Should parse miga config", func() {
+			So(cfg.Miga.Driver, ShouldEqual, "goose")
+			So(cfg.Miga.Path, ShouldEqual, "./tests/migrations/goose")
+			So(cfg.Miga.TableName, ShouldEqual, "db_version")
 		})
 
-		Convey("Default dialect postgres", func() {
-			So(migCfg.Dialect, ShouldEqual, "postgres")
-			So(sedCfg.Dialect, ShouldEqual, "postgres")
+		Convey("Should parse logger", func() {
+			So(cfg.Logger.Level, ShouldEqual, "info")
+			So(cfg.Logger.Format, ShouldEqual, "console")
 		})
 
-		Convey("DSN should empty", func() {
-			So(migCfg.Dsn, ShouldBeEmpty)
-			So(sedCfg.Dsn, ShouldBeEmpty)
+		Convey("Should parse db block", func() {
+			So(cfg.Database.DSN, ShouldNotBeEmpty)
+			So(cfg.Database.Dialect, ShouldEqual, "mysql")
 		})
-
-		dir := "./migatmp"
-		err = os.Mkdir(dir, 0755)
-		So(err, ShouldBeNil)
-
-		for driverName := range drivers {
-			legend := fmt.Sprintf("Create tmp path setup %s driver", driverName)
-			Convey(legend, func() {
-				dir += "/" + string(driverName)
-				migCfg.Dir = dir + "/migrations"
-				sedCfg.Dir = dir + "/seeds"
-
-				for _, d := range []string{dir, migCfg.Dir, sedCfg.Dir} {
-					err = os.Mkdir(d, 0755)
-					So(err, ShouldBeNil)
-				}
-
-				d, err := driver.New(migCfg)
-				So(err, ShouldBeNil)
-
-				s, err := driver.New(sedCfg)
-				So(err, ShouldBeNil)
-
-				Convey("Miga should complete create cmd with empty DSN", func() {
-					flags := &flag.FlagSet{}
-					flags.Parse([]string{"testname"})
-					ctx := cli.NewContext(nil, flags, nil)
-
-					err = commands.Create(ctx, d)
-					So(err, ShouldBeNil)
-
-					err = commands.Create(ctx, s)
-					So(err, ShouldBeNil)
-
-					err = os.RemoveAll(dir)
-					So(err, ShouldBeNil)
-				})
-			})
-		}
-
-		err = os.RemoveAll("./migatmp")
-		So(err, ShouldBeNil)
 	})
 }

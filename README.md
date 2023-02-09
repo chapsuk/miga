@@ -24,8 +24,6 @@ PackageName | Version | Postgres            | MySQL    | Clickhouse | Vertica
 
 ## Features
 
-* Configuration by file or environment variables;
-* Seeding db by migration way;
 * One from several migration packages of your choice;
 * Converting one migration format to another;
 * Testing;
@@ -36,12 +34,12 @@ Miga CLI inherit from goose CLI and may not be familiar to users of other utilit
 See commands description before usage
 
 ```text
-≻ ./bin/miga migrate
+≻ ./bin/miga
 NAME:
-   miga migrate - Migrations root command
+   miga - Migrations root command
 
 USAGE:
-   miga migrate command [command options] [arguments...]
+   miga command [command options] [arguments...]
 
 COMMANDS:
      convert  Converting migrations FROM_FORMAT to TO_FORMAT and store to DESTENITION_PATH
@@ -59,57 +57,35 @@ COMMANDS:
 
 ## Configuration
 
-Miga has 3 level configuration options by priority:
+The config file after v1.0.0 required
 
 ### Flags
 
 ```bash
---config value      Config file name (default: "")
---driver value      Migration driver name: goose, migrate, stump (default: "goose")
---log.level value   Logger level [debug|info|...] (default: "debug")
---log.format value  Logger output format console|json (default: "console")
+--config value   Config file name (default: "miga.yml")
 ```
-
-### Environment variables
-
-Name                        | SettingDefault | Description
---------------------------- | -------------- | -----------------------
-MIGA_CONFIG                 | miga.yml       | config file
-MIGA_DRIVER                 | goose          | one from [list](#supporting)
-MIGA_POSTGRES_DSN           |                | postgres DSN string
-MIGA_MYSQL_DSN              |                | mysql DSN string
-MIGA_MIGRATE_PATH           | ./migrations   | migrations dir
-MIGA_MIGRATE_TABLE_NAME     | db_version     | migrations db version table name
-MIGA_SEED_PATH              | ./seeds        | seeds dir
-MIGA_SEED_TABLE_NAME        | seed_version   | seeds version table name
-MIGA_LOG_LEVEL              | info           | logging level
-MIGA_LOG_FORMAT             | console        | logging format (console or json)
-
-*prefix `MIGA` may be changed by build flag `-ldflags "-X main.Name=<NAME>"`
 
 ### Config file
 
 ```yml
-driver: goose
-postgres:
-  dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
-# mysql:
-#   dsn: "user:password@tcp(127.0.0.1:3306)/miga"
-migrate:
+miga:
+  driver: goose
   path: ./migrations
-  table_name: db_version
-seed:
-  path: ./seeds
-  table_name: seed_version
+  table: db_version
+
+db:
+  dsn: "postgres://user:password@127.0.0.1:5432/miga?sslmode=disable"
+  dialect: postgres
+
+logger:
+  level: info
+  format: console
 ```
 
 ### Using without config
 
 ```bash
-> MIGA_POSTGRES_DSN="postgres://user:password@127.0.0.1:5432/miga?sslmode=disable" \
-  MIGA_MIGRATE_PATH=./tests/migrations/goose/ \
-  MIGA_SEED_PATH=./tests/seeds/goose \
-  miga --driver goose migrate up
+> miga -c miga.yml up
 ```
 
 ## Tests

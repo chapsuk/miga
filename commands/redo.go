@@ -2,11 +2,20 @@ package commands
 
 import (
 	"miga/driver"
+	"miga/logger"
 
-	"gopkg.in/urfave/cli.v2"
+	"github.com/spf13/cobra"
 )
 
 // Redo rollback and rerun last migration
-func Redo(ctx *cli.Context, d driver.Interface) error {
-	return d.Redo()
+func Redo(driver func() driver.Interface) *cobra.Command {
+	return &cobra.Command{
+		Use:   "redo",
+		Short: "redo cmd",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := driver().Redo(); err != nil {
+				logger.G().Errorf("redo: %s", err)
+			}
+		},
+	}
 }
