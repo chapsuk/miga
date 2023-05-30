@@ -1,6 +1,6 @@
 FROM golang:1.19.5-alpine3.17
 RUN apk add make
-ADD . /go/src/miga
+COPY . /go/src/miga
 WORKDIR /go/src/miga
 RUN make build
 
