@@ -42,3 +42,4 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
           push: true
+          platforms: "linux/arm64,linux/amd64"
