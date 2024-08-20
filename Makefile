@@ -67,7 +67,7 @@ clickhouse_down:
 
 .PHONY: clickhouse_up
 clickhouse_up: clickhouse_down
-	docker-compose up -d
+	docker compose up -d
 
 .PHONY: vertica_down
 vertica_down:

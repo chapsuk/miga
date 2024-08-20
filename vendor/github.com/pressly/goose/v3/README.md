@@ -1,8 +1,10 @@
-# goose [![Goose CI](https://github.com/pressly/goose/actions/workflows/ci.yml/badge.svg)](https://github.com/pressly/goose/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/pressly/goose/v3.svg)](https://pkg.go.dev/github.com/pressly/goose/v3)
+<img align="right" width="125" src="assets/goose_logo.png">
 
-<p align="center">
-  <img src="assets/goose_logo.png" width="125"">
-</p>
+# goose
+
+[![Goose CI](https://github.com/pressly/goose/actions/workflows/ci.yaml/badge.svg)](https://github.com/pressly/goose/actions/workflows/ci.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/pressly/goose/v3.svg)](https://pkg.go.dev/github.com/pressly/goose/v3)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pressly/goose/v3)](https://goreportcard.com/report/github.com/pressly/goose/v3)
 
 Goose is a database migration tool. Manage your database schema by creating incremental SQL changes or Go functions.
 
@@ -13,38 +15,45 @@ Goose supports [embedding SQL migrations](#embedded-sql-migrations), which means
 ### Goals of this fork
 
 `github.com/pressly/goose` is a fork of `bitbucket.org/liamstask/goose` with the following changes:
+
 - No config files
 - [Default goose binary](./cmd/goose/main.go) can migrate SQL files only
 - Go migrations:
-    - We don't `go build` Go migrations functions on-the-fly
-      from within the goose binary
-    - Instead, we let you
-      [create your own custom goose binary](examples/go-migrations),
-      register your Go migration functions explicitly and run complex
-      migrations with your own `*sql.DB` connection
-    - Go migration functions let you run your code within
-      an SQL transaction, if you use the `*sql.Tx` argument
+  - We don't `go build` Go migrations functions on-the-fly
+    from within the goose binary
+  - Instead, we let you
+    [create your own custom goose binary](examples/go-migrations),
+    register your Go migration functions explicitly and run complex
+    migrations with your own `*sql.DB` connection
+  - Go migration functions let you run your code within
+    an SQL transaction, if you use the `*sql.Tx` argument
 - The goose pkg is decoupled from the binary:
-    - goose pkg doesn't register any SQL drivers anymore,
-      thus no driver `panic()` conflict within your codebase!
-    - goose pkg doesn't have any vendor dependencies anymore
+  - goose pkg doesn't register any SQL drivers anymore,
+    thus no driver `panic()` conflict within your codebase!
+  - goose pkg doesn't have any vendor dependencies anymore
 - We use timestamped migrations by default but recommend a hybrid approach of using timestamps in the development process and sequential versions in production.
 - Supports missing (out-of-order) migrations with the `-allow-missing` flag, or if using as a library supply the functional option `goose.WithAllowMissing()` to Up, UpTo or UpByOne.
 - Supports applying ad-hoc migrations without tracking them in the schema table. Useful for seeding a database after migrations have been applied. Use `-no-versioning` flag or the functional option `goose.WithNoVersioning()`.
 
 # Install
 
-    $ go install github.com/pressly/goose/v3/cmd/goose@latest
+```shell
+go install github.com/pressly/goose/v3/cmd/goose@latest
+```
 
 This will install the `goose` binary to your `$GOPATH/bin` directory.
 
 For a lite version of the binary without DB connection dependent commands, use the exclusive build tags:
 
-    $ go build -tags='no_postgres no_mysql no_sqlite3' -o goose ./cmd/goose
+```shell
+go build -tags='no_postgres no_mysql no_sqlite3 no_ydb' -o goose ./cmd/goose
+```
 
 For macOS users `goose` is available as a [Homebrew Formulae](https://formulae.brew.sh/formula/goose#default):
 
-    $ brew install goose
+```shell
+brew install goose
+```
 
 See the docs for more [installation instructions](https://pressly.github.io/goose/installation/).
 
@@ -52,6 +61,15 @@ See the docs for more [installation instructions](https://pressly.github.io/goos
 
 ```
 Usage: goose [OPTIONS] DRIVER DBSTRING COMMAND
+
+or
+
+Set environment key
+GOOSE_DRIVER=DRIVER
+GOOSE_DBSTRING=DBSTRING
+GOOSE_MIGRATION_DIR=MIGRATION_DIR
+
+Usage: goose [OPTIONS] COMMAND
 
 Drivers:
     postgres
@@ -62,6 +80,7 @@ Drivers:
     tidb
     clickhouse
     vertica
+    ydb
 
 Examples:
     goose sqlite3 ./foo.db status
@@ -70,35 +89,46 @@ Examples:
     goose sqlite3 ./foo.db create fetch_user_data go
     goose sqlite3 ./foo.db up
 
-    goose postgres "user=postgres password=postgres dbname=postgres sslmode=disable" status
+    goose postgres "user=postgres dbname=postgres sslmode=disable" status
     goose mysql "user:password@/dbname?parseTime=true" status
     goose redshift "postgres://user:password@qwerty.us-east-1.redshift.amazonaws.com:5439/db" status
     goose tidb "user:password@/dbname?parseTime=true" status
     goose mssql "sqlserver://user:password@dbname:1433?database=master" status
     goose clickhouse "tcp://127.0.0.1:9000" status
     goose vertica "vertica://user:password@localhost:5433/dbname?connection_load_balance=1" status
+    goose ydb "grpcs://localhost:2135/local?go_query_mode=scripting&go_fake_tx=scripting&go_query_bind=declare,numeric" status
+
+    GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING=./foo.db goose status
+    GOOSE_DRIVER=sqlite3 GOOSE_DBSTRING=./foo.db goose create init sql
+    GOOSE_DRIVER=postgres GOOSE_DBSTRING="user=postgres dbname=postgres sslmode=disable" goose status
+    GOOSE_DRIVER=mysql GOOSE_DBSTRING="user:password@/dbname" goose status
+    GOOSE_DRIVER=redshift GOOSE_DBSTRING="postgres://user:password@qwerty.us-east-1.redshift.amazonaws.com:5439/db" goose status
 
 Options:
 
   -allow-missing
-    	applies missing (out-of-order) migrations
+        applies missing (out-of-order) migrations
   -certfile string
-    	file path to root CA's certificates in pem format (only support on mysql)
+        file path to root CA's certificates in pem format (only support on mysql)
   -dir string
-    	directory with migration files (default ".")
-  -h	print help
+        directory with migration files (default ".", can be set via the GOOSE_MIGRATION_DIR env variable).
+  -h    print help
+  -no-color
+        disable color output (NO_COLOR env variable supported)
   -no-versioning
-    	apply migration commands with no versioning, in file order, from directory pointed to
-  -s	use sequential numbering for new migrations
+        apply migration commands with no versioning, in file order, from directory pointed to
+  -s    use sequential numbering for new migrations
   -ssl-cert string
-    	file path to SSL certificates in pem format (only support on mysql)
+        file path to SSL certificates in pem format (only support on mysql)
   -ssl-key string
-    	file path to SSL key in pem format (only support on mysql)
+        file path to SSL key in pem format (only support on mysql)
   -table string
-    	migrations table name (default "goose_db_version")
-  -v	enable verbose mode
+        migrations table name (default "goose_db_version")
+  -timeout duration
+        maximum allowed duration for queries to run; e.g., 1h13m
+  -v    enable verbose mode
   -version
-    	print version
+        print version
 
 Commands:
     up                   Migrate the DB to the most recent version available
@@ -112,6 +142,7 @@ Commands:
     version              Print the current version of the database
     create NAME [sql|go] Creates new migration file with the current timestamp
     fix                  Apply sequential ordering to migrations
+    validate             Check migration files without running them
 ```
 
 ## create
@@ -254,7 +285,50 @@ language plpgsql;
 -- +goose StatementEnd
 ```
 
+Goose supports environment variable substitution in SQL migrations through annotations. To enable
+this feature, use the `-- +goose ENVSUB ON` annotation before the queries where you want
+substitution applied. It stays active until the `-- +goose ENVSUB OFF` annotation is encountered.
+You can use these annotations multiple times within a file.
+
+This feature is disabled by default for backward compatibility with existing scripts.
+
+For `PL/pgSQL` functions or other statements where substitution is not desired, wrap the annotations
+explicitly around the relevant parts. For example, to exclude escaping the `**` characters:
+
+```sql
+-- +goose StatementBegin
+CREATE OR REPLACE FUNCTION test_func()
+RETURNS void AS $$
+-- +goose ENVSUB ON
+BEGIN
+	RAISE NOTICE '${SOME_ENV_VAR}';
+END;
+-- +goose ENVSUB OFF
+$$ LANGUAGE plpgsql;
+-- +goose StatementEnd
+```
+
+<details>
+<summary>Supported expansions (click here to expand):</summary>
+
+- `${VAR}` or $VAR - expands to the value of the environment variable `VAR`
+- `${VAR:-default}` - expands to the value of the environment variable `VAR`, or `default` if `VAR`
+  is unset or null
+- `${VAR-default}` - expands to the value of the environment variable `VAR`, or `default` if `VAR`
+  is unset
+- `${VAR?err_msg}` - expands to the value of the environment variable `VAR`, or prints `err_msg` and
+  error if `VAR` unset
+- ~~`${VAR:?err_msg}` - expands to the value of the environment variable `VAR`, or prints `err_msg`
+  and error if `VAR` unset or null.~~ **THIS IS NOT SUPPORTED**
+
+See
+[mfridman/interpolate](https://github.com/mfridman/interpolate?tab=readme-ov-file#supported-expansions)
+for more details on supported expansions.
+
+</details>
+
 ## Embedded sql migrations
+
 Go 1.16 introduced new feature: [compile-time embedding](https://pkg.go.dev/embed/) files into binary and
 corresponding [filesystem abstraction](https://pkg.go.dev/io/fs/).
 
@@ -338,6 +412,9 @@ func Down(tx *sql.Tx) error {
 }
 ```
 
+Note that Go migration files must begin with a numeric value, followed by an
+underscore, and must not end with `*_test.go`.
+
 # Development
 
 This can be used to build local `goose` binaries without having the latest Go version installed locally.
@@ -347,6 +424,7 @@ DOCKER_BUILDKIT=1  docker build -f Dockerfile.local --output bin .
 ```
 
 # Hybrid Versioning
+
 Please, read the [versioning problem](https://github.com/pressly/goose/issues/63#issuecomment-428681694) first.
 
 By default, if you attempt to apply missing (out-of-order) migrations `goose` will raise an error. However, If you want to apply these missing migrations pass goose the `-allow-missing` flag, or if using as a library supply the functional option `goose.WithAllowMissing()` to Up, UpTo or UpByOne.

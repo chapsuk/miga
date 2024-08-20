@@ -16,7 +16,6 @@
 // under the License.
 
 //go:build amd64 || arm64
-// +build amd64 arm64
 
 package darwin
 
@@ -24,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joeshaw/multierror"
@@ -139,6 +139,10 @@ func (h *host) Memory() (*types.HostMemoryInfo, error) {
 	return &mem, nil
 }
 
+func (h *host) FQDN() (string, error) {
+	return shared.FQDN()
+}
+
 func (h *host) LoadAverage() (*types.LoadAverageInfo, error) {
 	load, err := getLoadAverage()
 	if err != nil {
@@ -210,7 +214,7 @@ func (r *reader) hostname(h *host) {
 	if r.addErr(err) {
 		return
 	}
-	h.info.Hostname = v
+	h.info.Hostname = strings.ToLower(v)
 }
 
 func (r *reader) network(h *host) {

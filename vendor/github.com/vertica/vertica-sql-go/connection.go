@@ -1,6 +1,6 @@
 package vertigo
 
-// Copyright (c) 2019-2023 Micro Focus or one of its affiliates.
+// Copyright (c) 2019-2023 Open Text.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,9 +109,11 @@ type connection struct {
 	scratch          [512]byte
 	sessionID        string
 	autocommit       string
+	oauthaccesstoken string
 	serverTZOffset   string
 	dead             bool // used if a ROLLBACK severity error is encountered
 	sessMutex        sync.Mutex
+	workload         string
 }
 
 // Begin - Begin starts and returns a new transaction. (DEPRECATED)
@@ -236,6 +238,9 @@ func newConnection(connString string) (*connection, error) {
 		result.autocommit = "off"
 	}
 
+	// Read OAuth access token flag.
+	result.oauthaccesstoken = result.connURL.Query().Get("oauth_access_token")
+
 	// Read connection load balance flag.
 	loadBalanceFlag := result.connURL.Query().Get("connection_load_balance")
 
@@ -255,6 +260,9 @@ func newConnection(connString string) (*connection, error) {
 	if sslFlag == "" {
 		sslFlag = tlsModeNone
 	}
+
+	// Read Workload flag
+	result.workload = result.connURL.Query().Get("workload")
 
 	result.conn, err = result.establishSocketConnection()
 
@@ -415,14 +423,14 @@ func min(a, b int) int {
 
 func (v *connection) handshake() error {
 
-	if v.connURL.User == nil {
-		return fmt.Errorf("connection string must include a user name")
+	if v.connURL.User == nil && len(v.oauthaccesstoken) == 0 {
+		return fmt.Errorf("connection string must include a user name or oauth_access_token")
 	}
 
 	userName := v.connURL.User.Username()
 
-	if len(userName) == 0 {
-		return fmt.Errorf("connection string must have a non-empty user name")
+	if len(userName) == 0 && len(v.oauthaccesstoken) == 0 {
+		return fmt.Errorf("connection string must have a non-empty user name or oauth_access_token")
 	}
 
 	dbName := ""
@@ -431,14 +439,16 @@ func (v *connection) handshake() error {
 	}
 
 	msg := &msgs.FEStartupMsg{
-		ProtocolVersion: protocolVersion,
-		DriverName:      driverName,
-		DriverVersion:   driverVersion,
-		Username:        userName,
-		Database:        dbName,
-		SessionID:       v.sessionID,
-		ClientPID:       v.clientPID,
-		Autocommit:      v.autocommit,
+		ProtocolVersion:  protocolVersion,
+		DriverName:       driverName,
+		DriverVersion:    driverVersion,
+		Username:         userName,
+		Database:         dbName,
+		SessionID:        v.sessionID,
+		ClientPID:        v.clientPID,
+		Autocommit:       v.autocommit,
+		OAuthAccessToken: v.oauthaccesstoken,
+		Workload:         v.workload,
 	}
 
 	if err := v.sendMessage(msg); err != nil {
@@ -502,11 +512,21 @@ func (v *connection) initializeSession() error {
 		return fmt.Errorf("can't get server timezone: %s", str)
 	}
 
-	v.serverTZOffset = str[len(str)-3:]
+	v.serverTZOffset = getTimeZoneOffset(str)
 
-	connectionLogger.Debug("Setting server timezone offset to %s", str[len(str)-3:])
+	connectionLogger.Debug("Setting server timezone offset to %s", v.serverTZOffset)
 
 	return nil
+}
+
+func getTimeZoneOffset(str string) string {
+	for i := len(str) - 1; i >= 0 && i >= len(str)-8; i-- {
+		ch := str[i]
+		if ch == '+' || ch == '-' {
+			return str[i:]
+		}
+	}
+	return "+00"
 }
 
 func (v *connection) defaultMessageHandler(bMsg msgs.BackEndMsg) (bool, error) {
@@ -526,6 +546,8 @@ func (v *connection) defaultMessageHandler(bMsg msgs.BackEndMsg) (bool, error) {
 			err = v.authSendMD5Password(msg.ExtraAuthData)
 		case common.AuthenticationSHA512Password:
 			err = v.authSendSHA512Password(msg.ExtraAuthData)
+		case common.AuthenticationOAuth:
+			err = v.authSendOAuthAccessToken()
 		default:
 			handled = false
 			err = fmt.Errorf("unsupported authentication scheme: %d", msg.Response)
@@ -712,6 +734,11 @@ func (v *connection) authSendSHA512Password(extraAuthData []byte) error {
 
 	msg := &msgs.FEPasswordMsg{PasswordData: hash2}
 
+	return v.sendMessage(msg)
+}
+
+func (v *connection) authSendOAuthAccessToken() error {
+	msg := &msgs.FEPasswordMsg{PasswordData: v.oauthaccesstoken}
 	return v.sendMessage(msg)
 }
 
