@@ -2,7 +2,7 @@ module miga
 
 go 1.23
 
-replace github.com/pressly/goose/v3 v3.21.1 => github.com/chapsuk/goose/v3 v3.0.0-20240820172103-c6251288bf9b
+replace github.com/pressly/goose/v3 v3.21.1 => github.com/chapsuk/goose/v3 v3.0.0-20240820180124-aabc7719b731
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.27.1
