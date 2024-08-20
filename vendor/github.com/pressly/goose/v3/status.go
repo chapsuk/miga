@@ -1,7 +1,9 @@
 package goose
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -9,6 +11,12 @@ import (
 
 // Status prints the status of all migrations.
 func Status(db *sql.DB, dir string, opts ...OptionsFunc) error {
+	ctx := context.Background()
+	return StatusContext(ctx, db, dir, opts...)
+}
+
+// StatusContext prints the status of all migrations.
+func StatusContext(ctx context.Context, db *sql.DB, dir string, opts ...OptionsFunc) error {
 	option := &options{}
 	for _, f := range opts {
 		f(option)
@@ -18,8 +26,8 @@ func Status(db *sql.DB, dir string, opts ...OptionsFunc) error {
 		return fmt.Errorf("failed to collect migrations: %w", err)
 	}
 	if option.noVersioning {
-		log.Println("    Applied At                  Migration")
-		log.Println("    =======================================")
+		log.Printf("    Applied At                  Migration\n")
+		log.Printf("    =======================================\n")
 		for _, current := range migrations {
 			log.Printf("    %-24s -- %v\n", "no versioning", filepath.Base(current.Source))
 		}
@@ -27,14 +35,14 @@ func Status(db *sql.DB, dir string, opts ...OptionsFunc) error {
 	}
 
 	// must ensure that the version table exists if we're running on a pristine DB
-	if _, err := EnsureDBVersion(db); err != nil {
+	if _, err := EnsureDBVersionContext(ctx, db); err != nil {
 		return fmt.Errorf("failed to ensure DB version: %w", err)
 	}
 
-	log.Println("    Applied At                  Migration")
-	log.Println("    =======================================")
+	log.Printf("    Applied At                  Migration\n")
+	log.Printf("    =======================================\n")
 	for _, migration := range migrations {
-		if err := printMigrationStatus(db, migration.Version, filepath.Base(migration.Source)); err != nil {
+		if err := printMigrationStatus(ctx, db, migration.Version, filepath.Base(migration.Source)); err != nil {
 			return fmt.Errorf("failed to print status: %w", err)
 		}
 	}
@@ -42,23 +50,15 @@ func Status(db *sql.DB, dir string, opts ...OptionsFunc) error {
 	return nil
 }
 
-func printMigrationStatus(db *sql.DB, version int64, script string) error {
-	q := GetDialect().migrationSQL()
-
-	var row MigrationRecord
-
-	err := db.QueryRow(q, version).Scan(&row.TStamp, &row.IsApplied)
-	if err != nil && err != sql.ErrNoRows {
+func printMigrationStatus(ctx context.Context, db *sql.DB, version int64, script string) error {
+	m, err := store.GetMigration(ctx, db, TableName(), version)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("failed to query the latest migration: %w", err)
 	}
-
-	var appliedAt string
-	if row.IsApplied {
-		appliedAt = row.TStamp.Format(time.ANSIC)
-	} else {
-		appliedAt = "Pending"
+	appliedAt := "Pending"
+	if m != nil && m.IsApplied {
+		appliedAt = m.Timestamp.Format(time.ANSIC)
 	}
-
 	log.Printf("    %-24s -- %v\n", appliedAt, script)
 	return nil
 }

@@ -16,22 +16,26 @@
 // under the License.
 
 //go:build amd64 || arm64
-// +build amd64 arm64
 
 package darwin
 
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 
 	"github.com/elastic/go-sysinfo/types"
 )
+
+var errInvalidProcargs2Data = errors.New("invalid kern.procargs2 data")
 
 func (s darwinSystem) Processes() ([]types.Process, error) {
 	ps, err := unix.SysctlKinfoProcSlice("kern.proc.all")
@@ -170,42 +174,48 @@ func (p *process) Memory() (types.MemoryInfo, error) {
 	}, nil
 }
 
-var nullTerminator = []byte{0}
-
 // wrapper around sysctl KERN_PROCARGS2
 // callbacks params are optional,
 // up to the caller as to which pieces of data they want
 func kern_procargs(pid int, p *process) error {
 	data, err := unix.SysctlRaw("kern.procargs2", pid)
 	if err != nil {
-		return nil
-	}
-	buf := bytes.NewBuffer(data)
-
-	// argc
-	var argc int32
-	if err := binary.Read(buf, binary.LittleEndian, &argc); err != nil {
+		if errors.Is(err, syscall.EINVAL) {
+			// sysctl returns "invalid argument" for both "no such process"
+			// and "operation not permitted" errors.
+			return fmt.Errorf("no such process or operation not permitted: %w", err)
+		}
 		return err
 	}
 
+	return parseKernProcargs2(data, p)
+}
+
+func parseKernProcargs2(data []byte, p *process) error {
+	// argc
+	if len(data) < 4 {
+		return errInvalidProcargs2Data
+	}
+	argc := binary.LittleEndian.Uint32(data)
+	data = data[4:]
+
 	// exe
-	lines := bytes.Split(buf.Bytes(), nullTerminator)
-	p.exe = string(lines[0])
+	lines := strings.Split(string(data), "\x00")
+	p.exe = lines[0]
 	lines = lines[1:]
 
-	// skip nulls
+	// Skip nulls that may be appended after the exe.
 	for len(lines) > 0 {
-		if len(lines[0]) == 0 {
-			lines = lines[1:]
-			continue
+		if lines[0] != "" {
+			break
 		}
-		break
+		lines = lines[1:]
 	}
 
-	// args
-	for i := 0; i < int(argc); i++ {
-		p.args = append(p.args, string(lines[0]))
-		lines = lines[1:]
+	// argv
+	if c := min(argc, uint32(len(lines))); c > 0 {
+		p.args = lines[:c]
+		lines = lines[c:]
 	}
 
 	// env vars
@@ -215,13 +225,8 @@ func kern_procargs(pid int, p *process) error {
 			break
 		}
 
-		parts := bytes.SplitN(l, []byte{'='}, 2)
-		key := string(parts[0])
-		var value string
-		if len(parts) == 2 {
-			value = string(parts[1])
-		}
-		env[key] = value
+		key, val, _ := strings.Cut(l, "=")
+		env[key] = val
 	}
 	p.env = env
 
@@ -239,4 +244,11 @@ func int8SliceToString(s []int8) string {
 		buf.WriteByte(byte(b))
 	}
 	return buf.String()
+}
+
+func min(a, b uint32) uint32 {
+	if a < b {
+		return a
+	}
+	return b
 }
