@@ -297,6 +297,9 @@ func TestMigrations(t *testing.T) {
 					tableName = "clickhouse_replicated_db_version"
 					tableSuffix = "_replicated"
 				}
+				if dialect == "starrocks" {
+					dir += "_starrocks"
+				}
 
 				driverInst, err := driver.New(&config.Config{
 					Miga: config.MigaConfig{
@@ -315,6 +318,9 @@ func TestMigrations(t *testing.T) {
 				dbDriver := dialect
 				if dialect == "clickhouse-replicated" {
 					dbDriver = "clickhouse"
+				}
+				if dialect == "starrocks" {
+					dbDriver = "mysql"
 				}
 				db, err := sql.Open(dbDriver, string(dsns[dialect]))
 				So(err, ShouldBeNil)

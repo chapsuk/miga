@@ -26,6 +26,9 @@ func New(dialect, dsn, tableName, dir string) (*Goose, error) {
 	if dialect == "clickhouse-replicated" {
 		driverName = "clickhouse"
 	}
+	if dialect == "starrocks" {
+		driverName = "mysql"
+	}
 
 	db, err := sql.Open(driverName, dsn)
 	if err != nil {
