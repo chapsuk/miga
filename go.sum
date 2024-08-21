@@ -26,8 +26,8 @@ github.com/aws/aws-sdk-go v1.15.54/go.mod h1:mFuSZ37Z9YOHbQEwBWztmVzqXrEkub65tZo
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932/go.mod h1:NOuUCSz6Q9T7+igc/hlvDOUdtWKryOrtFyIVABv/p7k=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
-github.com/chapsuk/goose/v3 v3.0.0-20240820180124-aabc7719b731 h1:hsWTBSqgJkDGi+WDrC79vvNYX4y6tNPc3UYUP+/cqY0=
-github.com/chapsuk/goose/v3 v3.0.0-20240820180124-aabc7719b731/go.mod h1:3cbFEcrkpSdwbzqv0g81mfughlLVY5dlvrIMyi8NBk8=
+github.com/chapsuk/goose/v3 v3.0.0-20240821090337-29582d910846 h1:YpcCp2HAxaPNdtzrK0Odz4yf2lwrBbnPM6VHOuwHUhk=
+github.com/chapsuk/goose/v3 v3.0.0-20240821090337-29582d910846/go.mod h1:3cbFEcrkpSdwbzqv0g81mfughlLVY5dlvrIMyi8NBk8=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c/go.mod h1:XGLbWH/ujMcbPbhZq52Nv6UrCghb1yGn//133kEsvDk=
