@@ -21,7 +21,7 @@ type (
 
 var (
 	drivers = map[driverName]dialects{
-		"goose":   []string{"mysql", "postgres", "clickhouse", "vertica", "clickhouse-replicated"},
+		"goose": []string{"mysql", "postgres", "clickhouse", "vertica", "clickhouse-replicated","starrocks"},
 		"migrate": []string{"mysql", "postgres"},
 		"impg":    []string{"postgres"},
 	}
@@ -32,5 +32,6 @@ var (
 		"clickhouse":            "tcp://user:password@127.0.0.1:9000/miga",
 		"clickhouse-replicated": "tcp://user:password@127.0.0.1:9000/miga",
 		"vertica":               "vertica://dbadmin:@127.0.0.1:5433/docker",
+		"starrocks":             "root@tcp(127.0.0.1:9030)/miga?interpolateParams=true",
 	}
 )

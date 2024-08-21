@@ -4,6 +4,7 @@ PG_CONTAINER_NAME = miga-pg
 MYSQL_CONTAINER_NAME = miga-mysql
 CLICKHOUSE_CONTAINER_NAME = miga-clickhouse
 VERTICA_CONTAINER_NAME = miga-vertica
+STARROCKS_CONTAINER_NAME = miga-starrocks
 IMAGE_NAME = chapsuk/$(NAME)
 
 TRAVIS_POSTGRES = postgres://postgres:@127.0.0.1:5432/miga?sslmode=disable
@@ -29,10 +30,10 @@ test:
 	go test -v -race ./...
 
 .PHONY: db_up
-db_up: vertica_up postgres_up mysql_up clickhouse_up
+db_up: vertica_up postgres_up mysql_up clickhouse_up starrocks_up
 
 .PHONY: db_down
-db_down: postgres_down mysql_down clickhouse_down vertica_down
+db_down: postgres_down mysql_down clickhouse_down vertica_down starrocks_down
 
 .PHONY: postgres_up
 postgres_up: postgres_down
@@ -79,3 +80,21 @@ vertica_up: vertica_down
 		-p 5433:5433 \
 		--name=$(VERTICA_CONTAINER_NAME) \
 		dataplatform/docker-vertica
+
+.PHONY: starrocks_down
+starrocks_down:
+	-docker rm -f $(STARROCKS_CONTAINER_NAME)
+
+.PHONY: starrocks_up
+starrocks_up: starrocks_down
+	docker run -d \
+		-p 9030:9030 \
+		--name=$(STARROCKS_CONTAINER_NAME) \
+		starrocks/allin1-ubuntu:3.2-latest
+	sleep 15
+	docker exec -i $(STARROCKS_CONTAINER_NAME) \
+		mysql -P 9030 -h 127.0.0.1 -u root \
+		-e "CREATE DATABASE IF NOT EXISTS miga"
+	docker exec -i $(STARROCKS_CONTAINER_NAME) \
+		mysql -P 9030 -h 127.0.0.1 -u root \
+		-e 'ADMIN SET FRONTEND CONFIG ("enable_fast_schema_evolution" = "true")'
