@@ -11,6 +11,7 @@ func Init(appName, appVersion, level, format string) error {
 	cfg := zap.NewProductionConfig()
 	cfg.OutputPaths = []string{"stdout"}
 	cfg.ErrorOutputPaths = []string{"stdout"}
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	cfg.Encoding = format
 	switch format {
@@ -18,9 +19,6 @@ func Init(appName, appVersion, level, format string) error {
 		cfg.DisableCaller = true
 		cfg.DisableStacktrace = true
 		cfg.EncoderConfig.EncodeLevel = nil
-		cfg.EncoderConfig.EncodeTime = nil
-	default:
-		cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	}
 
 	var lvl zapcore.Level
