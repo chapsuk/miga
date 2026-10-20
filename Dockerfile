@@ -1,4 +1,4 @@
-FROM golang:1.23.0-alpine3.20 AS build
+FROM golang:1.27.3-alpine3.24 AS build
 RUN apk add make tzdata
 COPY . /go/src/miga
 WORKDIR /go/src/miga
